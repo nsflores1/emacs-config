@@ -64,10 +64,7 @@
 				    "%b"))))
 
 (setq default-frame-alist '((vertical-scroll-bars . nil)
-                            (horizontal-scroll-bars . nil)
-;; setting the face in here prevents flashes of color as the theme gets activated
-                            (background-color . "#000000")
-                            (foreground-color . "#ffffff")))
+                            (horizontal-scroll-bars . nil)))
 (if *is-a-mac*
     (add-to-list 'default-frame-alist '((ns-transparent-titlebar . t)
 					(ns-appearance . dark))))

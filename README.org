@@ -28,11 +28,295 @@ Firstly, make sure the following programs are installed:
   
 Ideally in a future version of this config, it would prompt you to install these, but that's currently not the case.
 
-`git clone` this into `~/.emacs.d`, then start Emacs. This will take some time on initial startup, but after the first boot this process should become substantially faster. It works on *my* machine, but I make no guarantees that this will be the case on yours!
+~git clone~ this into ~~/.emacs.d~, then start Emacs. This will take some time on initial startup, but after the first boot this process should become substantially faster. It works on *my* machine, but I make no guarantees that this will be the case on yours!
 ** Things To Improve 🤔
 - The theming situation needs some work
 - Using less packages is desirable
 ** The Actual Configuration 📖
-*** Package Management
-The default ~package.el~ is disabled by ~early-init.el~. Let's now configure something new, that being Elpaca.
-*** TODO...
+*** Package Manager
+The default ~package.el~ is disabled by ~early-init.el~. Let's now configure something new, that being Elpaca:
+#+begin_src emacs-lisp
+  (defvar elpaca-installer-version 0.10)
+  (defvar elpaca-directory (expand-file-name "elpaca/" user-emacs-directory))
+  (defvar elpaca-builds-directory (expand-file-name "builds/" elpaca-directory))
+  (defvar elpaca-repos-directory (expand-file-name "repos/" elpaca-directory))
+  (defvar elpaca-order '(elpaca :repo "https://github.com/progfolio/elpaca.git"
+				:ref nil :depth 1 :inherit ignore
+				:files (:defaults "elpaca-test.el" (:exclude "extensions"))
+				:build (:not elpaca--activate-package)))
+  (let* ((repo  (expand-file-name "elpaca/" elpaca-repos-directory))
+	 (build (expand-file-name "elpaca/" elpaca-builds-directory))
+	 (order (cdr elpaca-order))
+	 (default-directory repo))
+    (add-to-list 'load-path (if (file-exists-p build) build repo))
+    (unless (file-exists-p repo)
+      (make-directory repo t)
+      (when (<= emacs-major-version 28) (require 'subr-x))
+      (condition-case-unless-debug err
+	  (if-let* ((buffer (pop-to-buffer-same-window "*elpaca-bootstrap*"))
+		    ((zerop (apply #'call-process `("git" nil ,buffer t "clone"
+						    ,@(when-let* ((depth (plist-get order :depth)))
+							(list (format "--depth=%d" depth) "--no-single-branch"))
+						    ,(plist-get order :repo) ,repo))))
+		    ((zerop (call-process "git" nil buffer t "checkout"
+					  (or (plist-get order :ref) "--"))))
+		    (emacs (concat invocation-directory invocation-name))
+		    ((zerop (call-process emacs nil buffer nil "-Q" "-L" "." "--batch"
+					  "--eval" "(byte-recompile-directory \".\" 0 'force)")))
+		    ((require 'elpaca))
+		    ((elpaca-generate-autoloads "elpaca" repo)))
+	      (progn (message "%s" (buffer-string)) (kill-buffer buffer))
+	    (error "%s" (with-current-buffer buffer (buffer-string))))
+	((error) (warn "%s" err) (delete-directory repo 'recursive))))
+    (unless (require 'elpaca-autoloads nil t)
+      (require 'elpaca)
+      (elpaca-generate-autoloads "elpaca" repo)
+      (load "./elpaca-autoloads")))
+  (add-hook 'after-init-hook #'elpaca-process-queues)
+  (elpaca `(,@elpaca-order))
+#+end_src
+We also need to replace the default version of ~use-package~:
+#+begin_src emacs-lisp  
+  ;; Install use-package support
+  (elpaca elpaca-use-package
+    ;; Enable use-package :ensure support for Elpaca.
+    (elpaca-use-package-mode))
+#+end_src
+And then install ~diminish~ since we'll call it a lot later:
+#+begin_src emacs-lisp
+  (use-package diminish
+    :ensure t)
+#+end_src
+*** Graphics Fixes
+We didn't have the frame loaded and rendered in until this point, so we couldn't fix stuff that was really visually annoying. Now, we can.
+#+begin_src emacs-lisp
+  (tool-bar-mode -1)
+  (scroll-bar-mode -1)
+  (pixel-scroll-mode)
+  (setq use-file-dialog nil
+	use-dialog-box nil
+	inhibit-startup-screen t)
+#+end_src
+*** Behavior Fixes
+These need to go first because if something fails later I need these loaded. Absolutely vital that this works.
+#+begin_src emacs-lisp
+  ; need for code snippets
+  (require 'org-tempo)
+
+  ; reread files from disk
+  (setopt auto-revert-avoid-polling t)
+  (setopt auto-revert-interval 5)
+  (setopt auto-revert-check-vc-info t)
+  (global-auto-revert-mode)
+
+  ;; move through windows with Ctrl-<arrow keys>
+  (windmove-default-keybindings 'control)
+
+  ;; fix archaic defaults
+  (setopt sentence-end-double-space nil)
+
+  ;; make right-click do something sensible
+  (when (display-graphic-p)
+    (context-menu-mode))
+
+  ;; don't litter file system with *~ backup files; put them all inside
+  ;; ~/.emacs.d/backup or wherever
+  (defun personal/backup-file-name (fpath)
+    "Return a new file path of a given file path.
+  If the new path's directories does not exist, create them."
+    (let* ((backupRootDir (concat user-emacs-directory "emacs-backup/"))
+	   (filePath (replace-regexp-in-string "[A-Za-z]:" "" fpath )) ; remove Windows driver letter in path
+	   (backupFilePath (replace-regexp-in-string "//" "/" (concat backupRootDir filePath "~") )))
+      (make-directory (file-name-directory backupFilePath) (file-name-directory backupFilePath))
+      backupFilePath))
+  (setopt make-backup-file-name-function 'personal/backup-file-name)
+
+  ;; highlight urls
+  ;; if we don't set it this way, xwidget breaks
+  (goto-address-prog-mode)
+
+  ;; show the fill column
+  (setq-default display-fill-column-indicator-column 80)
+  (add-hook 'prog-mode-hook #'display-fill-column-indicator-mode)
+
+  ;; force compliation to look nicer
+  (add-hook 'complilation-mode-hook 'visual-line-mode)
+
+  ;; nicer prompts
+  (fset 'yes-or-no-p 'y-or-n-p)
+  ;; doesn't work in older emacs
+  (when (version< emacs-version "29")
+    (when (boundp 'use-short-answers)
+      (setopt use-short-answers t)))
+
+  ;; remember where we are
+  (save-place-mode 1)
+
+  ;; always use UTF-8
+  (prefer-coding-system 'utf-8)
+  (setq locale-coding-system 'utf-8)
+  (unless *is-a-windows*
+    (set-selection-coding-system 'utf-8))
+#+end_src
+*** Utility Functions
+These are things that I use that are nice to have but aren't part of GNU Emacs.
+#+begin_src emacs-lisp
+  ;; kill the buffer and file
+  (defun personal/delete-this-file-and-buffer ()
+    "Delete the current file and kill its buffer."
+    (interactive)
+    (unless (buffer-file-name)
+      (error "Nothing is being edited right now!"))
+    (when (y-or-n-p (format "Really delete '%s'? "
+			    (file-name-nondirectory buffer-file-name)))
+      (delete-file (buffer-file-name))
+      (kill-this-buffer)
+      (message "Buffer killed.")))
+
+  ;; Rename the buffer and file
+  (defun personal/rename-this-file-and-buffer (new-name)
+    "Renames both current buffer and file it's visiting to NEW-NAME."
+    (interactive "sNew name: ")
+    (let ((name (buffer-name))
+	  (filename (buffer-file-name)))
+      (unless filename
+	(error "Buffer '%s' is not visiting a file!" name))
+      (progn
+	(when (file-exists-p filename)
+	  (rename-file filename new-name 1))
+	(set-visited-file-name new-name)
+	(rename-buffer new-name)
+	(message "Buffer renamed."))))
+
+  ;; Simpify our life.
+  (defun personal/revert-to-two-windows ()
+    "Delete all other windows and split it into two."
+    (interactive)
+    (delete-other-windows)
+    (split-window-right))
+
+  ;; deal with adding extensions for a mode.
+  (defun add-auto-mode (mode &rest patterns)
+    "Add entries to `auto-mode-alist' to use `MODE' for all given file `PATTERNS'."
+    (dolist (pattern patterns)
+      (add-to-list 'auto-mode-alist (cons pattern mode))))
+
+  ;; stops flycheck from yelling at you
+  (defun personal/headerise-elisp ()
+    "Add minimal header and footer to an elisp buffer in order to placate flycheck."
+    (interactive)
+    (let ((fname (if (buffer-file-name)
+		     (file-name-nondirectory (buffer-file-name))
+		   (error "This buffer is not visiting a file"))))
+      (save-excursion
+	(goto-char (point-min))
+	(insert ";;; " fname " --- Insert description here -*- lexical-binding: t -*-\n"
+		";;; Commentary:\n"
+		";;; Code:\n\n")
+	(goto-char (point-max))
+	(insert ";;; " fname " ends here\n"))))
+
+#+end_src
+*** Packages: Utility
+**** ~which-key~
+#+begin_src emacs-lisp
+  (use-package which-key
+    :ensure t
+    :diminish
+    :config
+    (which-key-mode))
+#+end_src
+**** ~sudo-edit~
+#+begin_src emacs-lisp
+  (use-package sudo-edit
+    :if *is-a-linux*
+    :ensure t)
+#+end_src
+**** ~exec-path-from-shell~
+#+begin_src emacs-lisp
+  (use-package exec-path-from-shell
+    :ensure t
+    :config
+    (when (memq window-system '(mac ns x))
+      (exec-path-from-shell-initialize)))
+#+end_src
+**** ~async~
+#+begin_src emacs-lisp
+  (use-package async
+    :ensure t
+    :config
+    (async-bytecomp-package-mode 1)
+    (dired-async-mode 1))
+#+end_src
+**** ~editorconfig~
+#+begin_src emacs-lisp
+  (use-package editorconfig
+    :ensure t
+    :diminish
+    :config
+    (editorconfig-mode 1))
+#+end_src
+*** Packages: Appearance
+**** Theme: ~solarized~
+I quite like the dark solarized theme, so we'll use that.
+#+begin_src emacs-lisp
+  ; ignore asking if custom themes are safe
+  (setq custom-safe-themes t)
+
+  (use-package solarized-theme
+    :ensure t
+    :demand t
+    :config
+    (setq solarized-high-contrast-mode-line nil
+	  solarized-distinct-doc-face t
+	  solarized-distinct-fringe-background t
+	  solarized-emphasize-indicators t
+	  x-underline-at-descent-line t)
+    (load-theme 'solarized-selenized-black t))
+#+end_src
+**** ~dimmer~
+#+begin_src emacs-lisp
+  (use-package dimmer
+    :ensure t
+    :if window-system
+    :diminish dimmer-mode
+    :config
+    (require 'dimmer)
+    (dimmer-configure-which-key)
+    (dimmer-configure-helm)
+    (dimmer-mode t))
+#+end_src
+**** ~beacon~
+#+begin_src emacs-lisp
+  (use-package beacon
+    :ensure t
+    :diminish beacon-mode
+    :config
+    (beacon-mode 1))
+#+end_src
+**** ~goggles~
+#+begin_src emacs-lisp
+  ;; flash the text that we're looking at when editing
+  (use-package goggles
+    :ensure t
+    :diminish goggles-mode
+    :hook ((prog-mode text-mode) . goggles-mode)
+    :config
+    (setq-default goggles-pulse t))
+#+end_src
+**** ~highlight-indent-guides~
+This package is a bit slow, but still the fastest one out there.
+#+begin_src emacs-lisp
+  ;; show us the end of the indentation lines
+  (use-package highlight-indent-guides
+    ;; the original package has a bug with background colors,
+    ;; this fork fixes it.
+    :ensure (:host github :repo "getong/highlight-indent-guides")
+    :diminish highlight-indent-guides-mode
+    :hook (prog-mode . highlight-indent-guides-mode)
+    :config
+    (setq highlight-indent-guides-method 'character))
+#+end_src
+
+
+
