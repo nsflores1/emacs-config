@@ -72,9 +72,6 @@
     (add-to-list 'default-frame-alist '((ns-transparent-titlebar . t)
 					(ns-appearance . dark))))
 
-; All these tools are in the menu-bar anyway
-(tool-bar-mode -1)
-
 (message "[init.el] graphical frames edited, if they exist")
 ;; early-init.el ends here
 

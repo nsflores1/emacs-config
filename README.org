@@ -36,8 +36,3 @@ Ideally in a future version of this config, it would prompt you to install these
 *** Package Management
 The default ~package.el~ is disabled by ~early-init.el~. Let's now configure something new, that being Elpaca.
 *** TODO...
-
-
-
-
-
