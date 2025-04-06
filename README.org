@@ -30,8 +30,8 @@ Ideally in a future version of this config, it would prompt you to install these
 
 ~git clone~ this into ~~/.emacs.d~, then start Emacs. This will take some time on initial startup, but after the first boot this process should become substantially faster. It works on *my* machine, but I make no guarantees that this will be the case on yours!
 ** Things To Improve 🤔
-- The theming situation needs some work
-- Using less packages is desirable
+- Elpaca when that becomes less broken (or I can update Emacs)
+- Update this to use the new features in Emacs 30
 ** The Actual Configuration 📖
 *** Package Manager
 The default ~package.el~ is disabled by ~early-init.el~. But we still need to define our repos:
@@ -391,6 +391,33 @@ Make hex color codes match their values.
 	   (help-mode . rainbow-mode)
 	   ((css-mode html-mode sass-mode) . rainbow-mode)))
 #+end_src
+**** ~cowsay~
+Add a little fortune to our scratch buffers.
+#+begin_src emacs-lisp
+  ;; first, make the image
+  (use-package cowsay
+    :ensure t
+    :init
+    (cowsay-load-cow-file (expand-file-name "tux.cow" user-emacs-directory)))
+
+  ;; wrap the cow in comments
+  (defun personal/prefix-comment (arg)
+    "Comment ARG with semicolons."
+    (interactive)
+    (mapconcat
+     (lambda (x) (concat ";; " x))
+     (split-string arg "\n" t) "\n"))
+
+  ;; now actually set our scratch buffer
+  (setq inhibit-startup-message t
+	initial-scratch-message (concat (personal/prefix-comment  (cowsay-string "Emacs has finished starting." "tux")) "\n\n"))
+
+  ;; redefine the annoying GNU advertisement
+  (defun display-startup-echo-area-message ()
+    "Gets rid of that annoying GNU advertisement."
+	 (message "[init.el] Init complete. Get out there!"))
+
+#+end_src
 *** Packages: Overhauls
 Some parts of Emacs are fundamentally broken. These packages replace those features outright with new things. I note what's being replaced.
 **** ~eat~: Replacement of ~ansi-term~
@@ -618,4 +645,91 @@ The mode doesn't really come with Emacs:
     :init
     ;; fix annoying issues with GOPATH
     (setenv "GOPATH" (concat (getenv "HOME") "/.go")))
+#+end_src
+**** Mode: Crontab
+#+begin_src emacs-lisp
+  (use-package crontab-mode
+    :ensure t
+    :mode "\\.crontab\\'")
+#+end_src
+**** Mode: Vimrc
+#+begin_src emacs-lisp
+  (use-package vimrc-mode
+    :ensure t
+    :mode "\\.vimrc\\.virc\\'")
+#+end_src
+**** Mode: Systemd Config
+#+begin_src emacs-lisp
+  (use-package systemd
+    :ensure t
+    :mode "\\.unit\\.service\\'")
+
+  (use-package journalctl-mode
+    :ensure t)
+#+end_src
+**** Mode: Git Config
+#+begin_src emacs-lisp
+  (use-package git-modes
+    :ensure t
+    :mode "\\.gitconfig\\'")
+#+end_src
+**** Mode: DHall
+#+begin_src emacs-lisp
+  (use-package dhall-mode
+    :ensure t
+    :mode "\\.dhall\\'")
+#+end_src
+**** Mode: CSV Files
+#+begin_src emacs-lisp
+  (use-package csv-mode
+    :ensure t
+    :mode "\\.[Cc][Ss][Vv]\\'"
+    :config
+    (setq csv-separators '("," ";" "|" " ")))
+#+end_src
+**** Mode: JSON Files
+#+begin_src emacs-lisp
+  (use-package json-mode
+    :ensure t
+    :mode "\\.json\\'")
+#+end_src
+**** Mode: YAML Files
+#+begin_src emacs-lisp
+  (use-package yaml-mode
+    :ensure t
+    :mode "\\.yml\\.erb\\'")
+#+end_src
+**** Mode: Unix Log
+#+begin_src emacs-lisp
+  (use-package logview
+    :ensure t)
+#+end_src
+**** Mode: phpBB
+#+begin_src emacs-lisp
+  (use-package bbcode-mode
+    :ensure t)
+#+end_src
+**** Mode: Standard ENV File
+#+begin_src emacs-lisp
+  (use-package dotenv-mode
+    :ensure t
+    :mode "\\.env\\'")
+#+end_src
+**** Mode: Standard INI File
+#+begin_src emacs-lisp
+  (use-package ini-mode
+    :ensure t
+    :mode "\\.ini\\'")
+#+end_src
+**** Mode: FVWM Config
+#+begin_src emacs-lisp
+  (use-package fvwm-mode
+    :ensure t
+    :mode "\\.fvwm\\'")
+#+end_src
+**** Mode: tmux Config
+#+begin_src emacs-lisp
+  (use-package tmux-mode
+    :ensure t
+    :mode "\\.tmux.conf\\'")
 #+end_src
