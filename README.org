@@ -11,20 +11,20 @@ The whole configuration lives in this file, so just scroll down!
 
 ** How to Install 💻
 Firstly, make sure the following programs are installed:
-- `python`, any version that's not `python2`
-- `ripgrep` (optional)
-- `git` (used by `straight.el` for managing packages)
-- `gcc` and `cmake`, used for `vterm` (optional)
-- `fish`, used to make completion files for `eshell` (optional)
-- `aspell`, used for enabling spellcheck (optional)
+- ~python~, any version that's not ~python2~
+- ~ripgrep~ (optional)
+- ~git~ (used by ~straight.el~ for managing packages)
+- ~gcc~ and ~cmake~, used for ~vterm~ (optional)
+- ~fish~, used to make completion files for ~eshell~ (optional)
+- ~aspell~, used for enabling spellcheck (optional)
 - Any specific language servers/packages needed by certain modes:
-  - Shell: `checkbashisms`
-  - LaTeX: `texlab`
-  - Common Lisp: `sbcl`
-  - Markdown: `markdown`
-  - Rust: `rust-analyzer`
-  - Python: `black`
-  - Go: `gopls`
+  - Shell: ~checkbashisms~
+  - LaTeX: ~texlab~
+  - Common Lisp: ~sbcl~
+  - Markdown: ~markdown~
+  - Rust: ~rust-analyzer~
+  - Python: ~black~
+  - Go: ~gopls~
   
 Ideally in a future version of this config, it would prompt you to install these, but that's currently not the case.
 
