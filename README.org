@@ -262,7 +262,7 @@ This is extremely useful since we often want to run a command on the line, but d
 #+begin_src emacs-lisp
   (use-package whole-line-or-region
     :ensure t
-    :diminish whole-line-or-region-global-mode
+    :diminish whole-line-or-region-local-mode
     :hook (after-init . whole-line-or-region-global-mode))
 #+end_src
 **** ~wgrep~
@@ -272,6 +272,12 @@ This package lets us mass edit search results, which is amazing!
     :ensure t
     :config
     (setq wgrep-auto-save-buffer t))
+#+end_src
+**** ~prism~
+This color-codes the syntax of code so that it's color coded by syntax level. Like a superpowered version of syntax highlighting.
+#+begin_src emacs-lisp
+  (use-package prism
+    :ensure (:host github :repo "alphapapa/prism.el"))
 #+end_src
 *** Packages: Appearance
 This category is for packages which make Emacs' interface look nicer.
@@ -291,6 +297,15 @@ I quite like the dark solarized theme, so we'll use that.
 	  solarized-emphasize-indicators t
 	  x-underline-at-descent-line t)
     (load-theme 'solarized-selenized-black t))
+#+end_src
+**** ~smooth-scrolling~
+This is the best package at least on macOS, and probably the best on Linux too.
+#+begin_src emacs-lisp
+  (use-package smooth-scrolling
+    :ensure t
+    :diminish
+    :hook (after-init . (lambda ()
+			  (smooth-scrolling-mode 1))))
 #+end_src
 **** ~dimmer~
 #+begin_src emacs-lisp
@@ -366,6 +381,16 @@ This only applies to parenthesis, but it makes Lisp a lot easier to read!
     :diminish rainbow-delimiters-mode
     :hook (prog-mode . rainbow-delimiters-mode))
 #+end_src
+**** ~rainbow-mode~
+Make hex color codes match their values.
+#+begin_src emacs-lisp
+  (use-package rainbow-mode
+    :ensure t
+    :diminish
+    :hook ((emacs-lisp-mode . rainbow-mode)
+	   (help-mode . rainbow-mode)
+	   ((css-mode html-mode sass-mode) . rainbow-mode)))
+#+end_src
 *** Packages: Overhauls
 Some parts of Emacs are fundamentally broken. These packages replace those features outright with new things. I note what's being replaced.
 **** ~eat~: Replacement of ~ansi-term~
@@ -439,7 +464,100 @@ Lastly, syntax highlighting:
     :config
     (eshell-syntax-highlighting-global-mode +1))
 #+end_src
+**** ~consult~: Command Enhancements
+These commands completely replace their stock components with upgrades.
+#+begin_src emacs-lisp
+  (use-package consult
+    :ensure t
+    :bind (
+	   ;; Drop-in replacements
+	   ("C-x b" . consult-buffer)     ; orig. switch-to-buffer
+	   ("M-y"   . consult-yank-pop)   ; orig. yank-pop
+	   ;; Searching
+	   ("M-s r" . consult-ripgrep)
+	   ("M-s l" . consult-line)       ; Alternative: rebind C-s to use
+	   ("M-s s" . consult-line)       ; consult-line instead of isearch, bind
+	   ("M-s L" . consult-line-multi) ; isearch to M-s s
+	   ("M-s o" . consult-outline)
+	   ;; Isearch integration
+	   :map isearch-mode-map
+	   ("M-e" . consult-isearch-history)   ; orig. isearch-edit-string
+	   ("M-s e" . consult-isearch-history) ; orig. isearch-edit-string
+	   ("M-s l" . consult-line)            ; needed by consult-line to detect isearch
+	   ("M-s L" . consult-line-multi)      ; needed by consult-line to detect isearch
+	   )
+    :config
+    ;; Narrowing lets you restrict results to certain groups of candidates
+    (setq consult-narrow-key "<"))
+#+end_src
+**** ~vertico~: Better Vertical Completion
+Basically exactly what it says. Makes every menu better.
+#+begin_src emacs-lisp  
+  (use-package vertico
+    :ensure t
+    :init
+    (vertico-mode))
 
+  (use-package vertico-directory
+    :ensure nil
+    :after vertico
+    :bind (:map vertico-map
+		("M-DEL" . vertico-directory-delete-word)))
+#+end_src
+**** ~marginalia~: Annotations with Completions
+Helps you figure out what exactly that option does.
+#+begin_src emacs-lisp
+  (use-package marginalia
+    :ensure t
+    :config
+    (marginalia-mode))
+#+end_src
+**** ~orderless~: Global Fuzzy Find
+This is a magical package that allows for any matching string to work in a search.
+#+begin_src emacs-lisp
+  (use-package orderless
+    :ensure t
+    :config
+    (setq completion-styles '(orderless)))
+#+end_src
+**** ~corfu~: In-Buffer Completion
+This is popup completion, which is a feature GNU Emacs has but doesn't use well.
+#+begin_src emacs-lisp
+  (use-package corfu
+    :ensure t
+    :diminish corfu-mode corfu-popupinfo-mode
+    :init
+    (global-corfu-mode)
+    (corfu-popupinfo-mode)
+    :bind (:map corfu-map ("RET" . nil))
+    ;; if we use eshell, be careful not to autocomplete
+    :hook (eshell-mode-hook . (lambda ()
+				(setq-local corfu-auto nil)
+				(corfu-mode)))
+    :config
+    ;; use corfu in the minibuffer
+    (defun corfu-enable-always-in-minibuffer ()
+      (unless (or (bound-and-true-p mct--active)
+		    (bound-and-true-p vertico--input))
+      (setq-local corfu-auto nil)
+      (corfu-mode 1)))
+    (add-hook 'minibuffer-setup-hook #'corfu-enable-always-in-minibuffer 1)
+    ;; automatic completion!
+    (setq corfu-auto t
+	  corfu-quit-no-match 'separator
+	  corfu-echo-documentation nil)
+    ;; turn on corfu's plugins
+    (corfu-history-mode 1))
+#+end_src
+We also want some popups and to have it work in the terminal:
+#+begin_src emacs-lisp
+  (use-package corfu-terminal
+    :if (not (display-graphic-p))
+    :ensure t
+    :diminish
+    :config
+    (corfu-terminal-mode))
+#+end_src
 *** Packages: Additions
 These packages add brand-new features and modes to Emacs.
 **** ~magit~: A Git Client
@@ -489,11 +607,6 @@ And this lets us edit PIP standards:
 #+begin_src emacs-lisp
   (use-package pip-requirements
     :ensure t)
-#+end_src
-If we have iPython, use that:
-#+begin_src emacs-lisp
-  (when (executable-find "ipython")
-    (setq python-shell-interpreter "ipython"))
 #+end_src
 **** Language: Go
 The mode doesn't really come with Emacs:
