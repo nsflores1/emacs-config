@@ -15,3 +15,13 @@ dist/
 
 # Undo-tree save-files
 *.~undo-tree
+
+# Package stores
+elpa/
+elpaca/
+straight/
+
+# Junk
+custom.el
+README.el
+places

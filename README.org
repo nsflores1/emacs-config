@@ -34,53 +34,15 @@ Ideally in a future version of this config, it would prompt you to install these
 - Using less packages is desirable
 ** The Actual Configuration 📖
 *** Package Manager
-The default ~package.el~ is disabled by ~early-init.el~. Let's now configure something new, that being Elpaca:
+The default ~package.el~ is disabled by ~early-init.el~. But we still need to define our repos:
 #+begin_src emacs-lisp
-  (defvar elpaca-installer-version 0.10)
-  (defvar elpaca-directory (expand-file-name "elpaca/" user-emacs-directory))
-  (defvar elpaca-builds-directory (expand-file-name "builds/" elpaca-directory))
-  (defvar elpaca-repos-directory (expand-file-name "repos/" elpaca-directory))
-  (defvar elpaca-order '(elpaca :repo "https://github.com/progfolio/elpaca.git"
-				:ref nil :depth 1 :inherit ignore
-				:files (:defaults "elpaca-test.el" (:exclude "extensions"))
-				:build (:not elpaca--activate-package)))
-  (let* ((repo  (expand-file-name "elpaca/" elpaca-repos-directory))
-	 (build (expand-file-name "elpaca/" elpaca-builds-directory))
-	 (order (cdr elpaca-order))
-	 (default-directory repo))
-    (add-to-list 'load-path (if (file-exists-p build) build repo))
-    (unless (file-exists-p repo)
-      (make-directory repo t)
-      (when (<= emacs-major-version 28) (require 'subr-x))
-      (condition-case-unless-debug err
-	  (if-let* ((buffer (pop-to-buffer-same-window "*elpaca-bootstrap*"))
-		    ((zerop (apply #'call-process `("git" nil ,buffer t "clone"
-						    ,@(when-let* ((depth (plist-get order :depth)))
-							(list (format "--depth=%d" depth) "--no-single-branch"))
-						    ,(plist-get order :repo) ,repo))))
-		    ((zerop (call-process "git" nil buffer t "checkout"
-					  (or (plist-get order :ref) "--"))))
-		    (emacs (concat invocation-directory invocation-name))
-		    ((zerop (call-process emacs nil buffer nil "-Q" "-L" "." "--batch"
-					  "--eval" "(byte-recompile-directory \".\" 0 'force)")))
-		    ((require 'elpaca))
-		    ((elpaca-generate-autoloads "elpaca" repo)))
-	      (progn (message "%s" (buffer-string)) (kill-buffer buffer))
-	    (error "%s" (with-current-buffer buffer (buffer-string))))
-	((error) (warn "%s" err) (delete-directory repo 'recursive))))
-    (unless (require 'elpaca-autoloads nil t)
-      (require 'elpaca)
-      (elpaca-generate-autoloads "elpaca" repo)
-      (load "./elpaca-autoloads")))
-  (add-hook 'after-init-hook #'elpaca-process-queues)
-  (elpaca `(,@elpaca-order))
-#+end_src
-We also need to replace the default version of ~use-package~:
-#+begin_src emacs-lisp  
-  ;; Install use-package support
-  (elpaca elpaca-use-package
-    ;; Enable use-package :ensure support for Elpaca.
-    (elpaca-use-package-mode))
+    (setq package-archives
+	  '(("gnu" . "https://elpa.gnu.org/packages/")
+	    ("melpa" . "https://melpa.org/packages/")
+	    ("org" . "https://orgmode.org/elpa/")
+	    ("nongnu" . "https://elpa.nongnu.org/nongnu/")))
+
+    (package-initialize)
 #+end_src
 And then install ~diminish~ since we'll call it a lot later:
 #+begin_src emacs-lisp
@@ -93,9 +55,32 @@ We didn't have the frame loaded and rendered in until this point, so we couldn't
   (tool-bar-mode -1)
   (scroll-bar-mode -1)
   (pixel-scroll-mode)
+
   (setq use-file-dialog nil
 	use-dialog-box nil
 	inhibit-startup-screen t)
+
+  (setopt line-number-mode t
+	  column-number-mode t
+	  x-underline-at-descent-line nil
+	  switch-to-buffer-obey-display-actions t
+	  show-trailing-whitespace nil
+	  indicate-buffer-boundaries 'left)
+
+  ; horizontal mouse scrolling
+  (setopt mouse-wheel-tilt-scroll t
+	  mouse-wheel-flip-direction t)
+
+  ; line numbers in programming modes
+  (add-hook 'prog-mode-hook 'display-line-numbers-mode)
+  (setopt display-line-numbers-width 3)
+
+  ; wrap text in visual modes
+  (add-hook 'text-mode-hook 'visual-line-mode)
+
+  ; modes where hl-line is enabled
+  (let ((hl-line-hooks '(text-mode-hook prog-mode-hook)))
+    (mapc (lambda (hook) (add-hook hook 'hl-line-mode)) hl-line-hooks))
 #+end_src
 *** Behavior Fixes
 These need to go first because if something fails later I need these loaded. Absolutely vital that this works.
@@ -157,6 +142,21 @@ These need to go first because if something fails later I need these loaded. Abs
   (setq locale-coding-system 'utf-8)
   (unless *is-a-windows*
     (set-selection-coding-system 'utf-8))
+
+  ;; when we have two unique buffers, act like it
+  (require 'uniquify)
+  (setq uniquify-separator " • "
+	uniquify-after-kill-buffer-p t
+	uniquify-ignore-buffers-re "^\\*"
+	uniquify-buffer-name-style 'reverse)
+
+  ;; handle long files
+  (when (fboundp 'so-long-enable)
+    (add-hook 'after-init-hook 'so-long-enable))
+
+  ;; when we're a mac, use mdfind not find
+  (when *is-a-mac*
+    (setq-default locate-command "mdfind"))
 #+end_src
 *** Utility Functions
 These are things that I use that are nice to have but aren't part of GNU Emacs.
@@ -218,6 +218,7 @@ These are things that I use that are nice to have but aren't part of GNU Emacs.
 
 #+end_src
 *** Packages: Utility
+This category is for packages which extend Emacs without adding brand new features. Basically just overhauls of existing features.
 **** ~which-key~
 #+begin_src emacs-lisp
   (use-package which-key
@@ -256,7 +257,24 @@ These are things that I use that are nice to have but aren't part of GNU Emacs.
     :config
     (editorconfig-mode 1))
 #+end_src
+**** ~whole-line-or-region~
+This is extremely useful since we often want to run a command on the line, but don't want to bother with painstakingly selecting the right region
+#+begin_src emacs-lisp
+  (use-package whole-line-or-region
+    :ensure t
+    :diminish whole-line-or-region-global-mode
+    :hook (after-init . whole-line-or-region-global-mode))
+#+end_src
+**** ~wgrep~
+This package lets us mass edit search results, which is amazing!
+#+begin_src emacs-lisp
+  (use-package wgrep
+    :ensure t
+    :config
+    (setq wgrep-auto-save-buffer t))
+#+end_src
 *** Packages: Appearance
+This category is for packages which make Emacs' interface look nicer.
 **** Theme: ~solarized~
 I quite like the dark solarized theme, so we'll use that.
 #+begin_src emacs-lisp
@@ -279,7 +297,7 @@ I quite like the dark solarized theme, so we'll use that.
   (use-package dimmer
     :ensure t
     :if window-system
-    :diminish dimmer-mode
+    :diminish
     :config
     (require 'dimmer)
     (dimmer-configure-which-key)
@@ -290,7 +308,7 @@ I quite like the dark solarized theme, so we'll use that.
 #+begin_src emacs-lisp
   (use-package beacon
     :ensure t
-    :diminish beacon-mode
+    :diminish
     :config
     (beacon-mode 1))
 #+end_src
@@ -299,7 +317,7 @@ I quite like the dark solarized theme, so we'll use that.
   ;; flash the text that we're looking at when editing
   (use-package goggles
     :ensure t
-    :diminish goggles-mode
+    :diminish
     :hook ((prog-mode text-mode) . goggles-mode)
     :config
     (setq-default goggles-pulse t))
@@ -312,11 +330,179 @@ This package is a bit slow, but still the fastest one out there.
     ;; the original package has a bug with background colors,
     ;; this fork fixes it.
     :ensure (:host github :repo "getong/highlight-indent-guides")
-    :diminish highlight-indent-guides-mode
+    :diminish
     :hook (prog-mode . highlight-indent-guides-mode)
     :config
     (setq highlight-indent-guides-method 'character))
 #+end_src
+**** ~highlight-escape-sequences~
+#+begin_src emacs-lisp
+  (use-package highlight-escape-sequences
+    :ensure t
+    :diminish hes-mode
+    :hook (after-init . hes-mode))
+#+end_src
+**** ~highlight-numbers~
+This package highlights numerical literals, not just any random number
+#+begin_src emacs-lisp
+  (use-package highlight-numbers
+    :ensure t
+    :diminish
+    :hook (prog-mode . highlight-numbers-mode))
+#+end_src
+**** ~page-break-lines~
+Shows us when the page break character is there in our text.
+#+begin_src emacs-lisp
+  (use-package page-break-lines
+    :ensure t
+    :diminish
+    :hook (after-init . global-page-break-lines-mode))
+#+end_src
+**** ~rainbow-delimiters~
+This only applies to parenthesis, but it makes Lisp a lot easier to read!
+#+begin_src emacs-lisp
+  (use-package rainbow-delimiters
+    :ensure t
+    :diminish rainbow-delimiters-mode
+    :hook (prog-mode . rainbow-delimiters-mode))
+#+end_src
+*** Packages: Overhauls
+Some parts of Emacs are fundamentally broken. These packages replace those features outright with new things. I note what's being replaced.
+**** ~eat~: Replacement of ~ansi-term~
+There's no need for ~vterm~ because honestly this thing is so fast it's good enough for almost every use case.
+#+begin_src emacs-lisp
+  (use-package eat
+    :ensure t
+    :custom
+    (eat-term-name "xterm")
+    :config
+    (eat-eshell-mode)                    
+    (eat-eshell-visual-command-mode))
+#+end_src
+**** ~jinx~: Replacement of ~flyspell~
+Flyspell is the worst. This is a much better alternative with almost no downsides. We'll also fix our dictionary while we're at it.
+#+begin_src emacs-lisp
+  (use-package jinx
+    :ensure t
+    :hook (((text-mode prog-mode) . jinx-mode))
+    :bind (("C-;" . jinx-correct))
+    :custom
+    (jinx-camel-modes '(prog-mode))
+    (jinx-delay 0.01))
 
+  (setopt dictionary-use-single-buffer t
+	  dictionary-server "dict.org")
+#+end_src
+**** A Bunch of ~eshell~ Fixes
+There's not really one big package that fixes ~eshell~, but a lot of these get really close to a full overhaul.
 
+Here's one that lets us see command feedback, like in ~zsh~:
+#+begin_src emacs-lisp
+  (use-package eshell-fringe-status
+    :ensure t
+    :after eshell
+    :diminish eshell-fringe-status-mode
+    :hook (eshell-mode . eshell-fringe-status-mode))
+#+end_src
+And we probably want some better suggestion feedback:
+#+begin_src emacs-lisp
+  (use-package eshell-did-you-mean
+    :ensure t
+    ; doesn't work on Windows
+    :if (or *is-a-linux* *is-a-mac*)
+    :after eshell
+    :config
+    (eshell-did-you-mean-setup))
 
+  (use-package esh-autosuggest
+    :ensure t
+    :after eshell
+    :diminish eshell-autosuggest-mode
+    :hook (eshell-mode . esh-autosuggest-mode))
+#+end_src
+We can also use ~fish~ scripts in ~eshell~, if it's installed:
+#+begin_src emacs-lisp
+  (use-package fish-completion
+    :ensure t
+    :after eshell
+    :diminish global-fish-completion-mode
+    :if (and (executable-find "fish") (or *is-a-linux* *is-a-mac*))
+    :config
+    (global-fish-completion-mode))
+#+end_src
+Lastly, syntax highlighting:
+#+begin_src emacs-lisp
+  (use-package eshell-syntax-highlighting
+    :ensure t
+    :diminish eshell-syntax-highlighting-global-mode
+    :after eshell
+    :config
+    (eshell-syntax-highlighting-global-mode +1))
+#+end_src
+
+*** Packages: Additions
+These packages add brand-new features and modes to Emacs.
+**** ~magit~: A Git Client
+A complete Git client is a pretty amazing thing.
+#+begin_src emacs-lisp
+  (use-package magit
+    :ensure t
+    :bind (("C-x g" . magit-status)))
+#+end_src
+We'll also grab a few bonus features as well:
+#+begin_src emacs-lisp
+  (use-package magit-todos
+    :ensure t
+    :after magit
+    :diminish
+    :init
+    (magit-todos-mode 1))
+#+end_src
+**** ~diff-hl~: Changes in Fringes
+Shows what has changed between Git commits. This doesn't work without a graphical frame and it doesn't work on non-version controlled files.
+#+begin_src emacs-lisp
+  (use-package diff-hl
+    :ensure t
+    :if window-system
+    :hook (after-init . global-diff-hl-mode)
+    :diminish global-diff-hl-mode
+    :custom
+    (diff-hl-disable-on-remote t)
+    (diff-hl-margin-symbols-alist
+     '((insert . "+")
+       (delete . "-")
+       (change . "*")
+       (unknown . "?")
+       (ignored . "i"))))
+
+#+end_src
+**** Language: Python
+The actual mode is bundled with Emacs. This fixes syntax:
+#+begin_src emacs-lisp
+  (use-package blacken
+    :ensure t
+    :ensure-system-package black
+    :diminish
+    :hook ((python-mode . blacken-mode)))
+#+end_src
+And this lets us edit PIP standards:
+#+begin_src emacs-lisp
+  (use-package pip-requirements
+    :ensure t)
+#+end_src
+If we have iPython, use that:
+#+begin_src emacs-lisp
+  (when (executable-find "ipython")
+    (setq python-shell-interpreter "ipython"))
+#+end_src
+**** Language: Go
+The mode doesn't really come with Emacs:
+#+begin_src emacs-lisp
+  (use-package go-mode
+    :ensure t
+    :config
+    (add-hook 'before-save-hook 'gofmt-before-save)
+    :init
+    ;; fix annoying issues with GOPATH
+    (setenv "GOPATH" (concat (getenv "HOME") "/.go")))
+#+end_src
