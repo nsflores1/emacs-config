@@ -44,10 +44,14 @@ The default ~package.el~ is disabled by ~early-init.el~. But we still need to de
 
     (package-initialize)
 #+end_src
-And then install ~diminish~ since we'll call it a lot later:
+And then install ~diminish~ and ~vc-use-package~ since we'll call it a lot later:
 #+begin_src emacs-lisp
   (use-package diminish
     :ensure t)
+
+  (if (version< emacs-version "30")
+      (unless (package-installed-p 'vc-use-package)
+	(package-vc-install "https://github.com/slotThe/vc-use-package")))
 #+end_src
 *** Graphics Fixes
 We didn't have the frame loaded and rendered in until this point, so we couldn't fix stuff that was really visually annoying. Now, we can.
@@ -77,6 +81,10 @@ We didn't have the frame loaded and rendered in until this point, so we couldn't
 
   ; wrap text in visual modes
   (add-hook 'text-mode-hook 'visual-line-mode)
+  ; hack to hide visual line mode
+  ; we don't need to see it. we'll *know*.
+  (use-package emacs
+    :diminish visual-line-mode)
 
   ; modes where hl-line is enabled
   (let ((hl-line-hooks '(text-mode-hook prog-mode-hook)))
@@ -234,10 +242,12 @@ This category is for packages which extend Emacs without adding brand new featur
     :ensure t)
 #+end_src
 **** ~exec-path-from-shell~
+We run it as non-interactive because Anaconda, if we have it installed, will slow down Emacs.
 #+begin_src emacs-lisp
   (use-package exec-path-from-shell
     :ensure t
     :config
+    (setq exec-path-from-shell-arguments nil)
     (when (memq window-system '(mac ns x))
       (exec-path-from-shell-initialize)))
 #+end_src
@@ -277,7 +287,29 @@ This package lets us mass edit search results, which is amazing!
 This color-codes the syntax of code so that it's color coded by syntax level. Like a superpowered version of syntax highlighting.
 #+begin_src emacs-lisp
   (use-package prism
-    :ensure (:host github :repo "alphapapa/prism.el"))
+    :ensure t
+    :vc (prism :url "https://github.com/alphapapa/prism.el"
+	       :branch "master"))
+#+end_src
+**** ~anzu~
+Displays the amount of matches for any given search, which is quite useful.
+#+begin_src emacs-lisp
+  (use-package anzu
+    :ensure t
+    :diminish 
+    :init
+    (global-anzu-mode +1))
+#+end_src
+**** ~switch-window~
+Extremely useful when you've got a lot of these on the screen.
+#+begin_src emacs-lisp
+  (use-package switch-window
+    :ensure t
+    :config
+    (setq switch-window-shortcut-style 'qwerty)
+    (setq switch-window-timeout nil)
+    :bind
+    ("C-x o". switch-window))
 #+end_src
 *** Packages: Appearance
 This category is for packages which make Emacs' interface look nicer.
@@ -308,12 +340,16 @@ This is the best package at least on macOS, and probably the best on Linux too.
 			  (smooth-scrolling-mode 1))))
 #+end_src
 **** ~dimmer~
+This package appears to be bugged. I'll have it be turned off for now
 #+begin_src emacs-lisp
   (use-package dimmer
-    :ensure t
+    :disabled t
     :if window-system
     :diminish
     :config
+    (setq dimmer-adjustment-mode :background
+	  dimmer-fraction 0.1
+	  dimmer-use-colorspace :rgb)
     (require 'dimmer)
     (dimmer-configure-which-key)
     (dimmer-configure-helm)
@@ -342,9 +378,9 @@ This package is a bit slow, but still the fastest one out there.
 #+begin_src emacs-lisp
   ;; show us the end of the indentation lines
   (use-package highlight-indent-guides
-    ;; the original package has a bug with background colors,
-    ;; this fork fixes it.
-    :ensure (:host github :repo "getong/highlight-indent-guides")
+    :ensure t
+    :vc (highlight-indent-guides :url "https://github.com/getong/highlight-indent-guides"
+				 :branch "master")
     :diminish
     :hook (prog-mode . highlight-indent-guides-mode)
     :config
@@ -417,6 +453,15 @@ Add a little fortune to our scratch buffers.
     "Gets rid of that annoying GNU advertisement."
 	 (message "[init.el] Init complete. Get out there!"))
 
+#+end_src
+**** ~org-superstar-mode~
+Makes ~org-mode~ have some prettier-looking bullet points!
+#+begin_src emacs-lisp
+  (use-package org-superstar
+    :ensure t
+    :diminish
+    :config
+    (add-hook 'org-mode-hook (lambda () (org-superstar-mode 1))))
 #+end_src
 *** Packages: Overhauls
 Some parts of Emacs are fundamentally broken. These packages replace those features outright with new things. I note what's being replaced.
@@ -585,6 +630,20 @@ We also want some popups and to have it work in the terminal:
     :config
     (corfu-terminal-mode))
 #+end_src
+**** ~helpful~: Help System
+#+begin_src emacs-lisp
+  (use-package helpful
+    :ensure t
+    :config
+    (global-set-key (kbd "C-h f") #'helpful-callable)
+    (global-set-key (kbd "C-h v") #'helpful-variable)
+    (global-set-key (kbd "C-h k") #'helpful-key)
+    (global-set-key (kbd "C-h x") #'helpful-command)
+    ;; this might break some lisp modes
+    (global-set-key (kbd "C-c C-d") #'helpful-at-point)
+    ;; this overrides GNU Info
+    (global-set-key (kbd "C-h F") #'helpful-function))
+#+end_src
 *** Packages: Additions
 These packages add brand-new features and modes to Emacs.
 **** ~magit~: A Git Client
@@ -602,6 +661,13 @@ We'll also grab a few bonus features as well:
     :diminish
     :init
     (magit-todos-mode 1))
+#+end_src
+**** ~forge~: A Git Forge Client
+Like ~magit~ but for GitHub. Invaluable.
+#+begin_src emacs-lisp
+  (use-package forge
+    :ensure t
+    :after magit)
 #+end_src
 **** ~diff-hl~: Changes in Fringes
 Shows what has changed between Git commits. This doesn't work without a graphical frame and it doesn't work on non-version controlled files.
@@ -645,6 +711,12 @@ The mode doesn't really come with Emacs:
     :init
     ;; fix annoying issues with GOPATH
     (setenv "GOPATH" (concat (getenv "HOME") "/.go")))
+#+end_src
+**** Language: Markdown
+The mode doesn't really come with Emacs:
+#+begin_src emacs-lisp
+  (use-package markdown-mode
+    :ensure t)
 #+end_src
 **** Mode: Crontab
 #+begin_src emacs-lisp
