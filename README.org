@@ -13,7 +13,7 @@ The whole configuration lives in this file, so just scroll down!
 Firstly, make sure the following programs are installed:
 - ~python~, any version that's not ~python2~
 - ~ripgrep~ (optional)
-- ~git~ (used by ~straight.el~ for managing packages)
+- ~git~ (used by ~magit~)
 - ~gcc~ and ~cmake~, used for ~vterm~ (optional)
 - ~fish~, used to make completion files for ~eshell~ (optional)
 - ~aspell~, used for enabling spellcheck (optional)
@@ -33,7 +33,7 @@ Ideally in a future version of this config, it would prompt you to install these
 - Elpaca when that becomes less broken (or I can update Emacs)
 - Update this to use the new features in Emacs 30
 ** The Actual Configuration 📖
-*** Package Manager
+*** Package Manager & Key Tools
 The default ~package.el~ is disabled by ~early-init.el~. But we still need to define our repos:
 #+begin_src emacs-lisp
     (setq package-archives
@@ -313,8 +313,8 @@ Extremely useful when you've got a lot of these on the screen.
 #+end_src
 *** Packages: Appearance
 This category is for packages which make Emacs' interface look nicer.
-**** Theme: ~solarized~
-I quite like the dark solarized theme, so we'll use that.
+**** Themes: ~solarized~, ~vscode-dark-plus~
+I quite like the dark VSCode and Solarized theme, so we'll use that.
 #+begin_src emacs-lisp
   ; ignore asking if custom themes are safe
   (setq custom-safe-themes t)
@@ -327,8 +327,12 @@ I quite like the dark solarized theme, so we'll use that.
 	  solarized-distinct-doc-face t
 	  solarized-distinct-fringe-background t
 	  solarized-emphasize-indicators t
-	  x-underline-at-descent-line t)
-    (load-theme 'solarized-selenized-black t))
+	  x-underline-at-descent-line t))
+  (use-package vscode-dark-plus-theme
+    :ensure t
+    :demand t
+    :config
+    (load-theme 'vscode-dark-plus t))
 #+end_src
 **** ~smooth-scrolling~
 This is the best package at least on macOS, and probably the best on Linux too.
@@ -373,18 +377,13 @@ This package appears to be bugged. I'll have it be turned off for now
     :config
     (setq-default goggles-pulse t))
 #+end_src
-**** ~highlight-indent-guides~
-This package is a bit slow, but still the fastest one out there.
+**** ~indent-bars~
+Highlight the code level we're at.
 #+begin_src emacs-lisp
-  ;; show us the end of the indentation lines
-  (use-package highlight-indent-guides
+  (use-package indent-bars
     :ensure t
-    :vc (highlight-indent-guides :url "https://github.com/getong/highlight-indent-guides"
-				 :branch "master")
     :diminish
-    :hook (prog-mode . highlight-indent-guides-mode)
-    :config
-    (setq highlight-indent-guides-method 'character))
+    :hook (prog-mode . indent-bars-mode))
 #+end_src
 **** ~highlight-escape-sequences~
 #+begin_src emacs-lisp
@@ -644,6 +643,25 @@ We also want some popups and to have it work in the terminal:
     ;; this overrides GNU Info
     (global-set-key (kbd "C-h F") #'helpful-function))
 #+end_src
+**** ~ctrlf~: Better ~isearch~
+This replaces ~isearch~ but is genuinely an improvement in every way.
+#+begin_src emacs-lisp
+  (use-package ctrlf
+    :ensure t
+    :diminish
+    :init
+    (ctrlf-mode +1))
+#+end_src
+**** ~mwim~: Better ~C-e~ and ~C-a~
+Moves to the next logical line position, not just to the end of the line.
+#+begin_src emacs-lisp
+  (use-package mwim
+    :ensure t
+    :diminish
+    :config
+    (global-set-key (kbd "C-a") 'mwim-beginning)
+    (global-set-key (kbd "C-e") 'mwim-end))
+#+end_src
 *** Packages: Additions
 These packages add brand-new features and modes to Emacs.
 **** ~magit~: A Git Client
@@ -716,6 +734,20 @@ The mode doesn't really come with Emacs:
 The mode doesn't really come with Emacs:
 #+begin_src emacs-lisp
   (use-package markdown-mode
+    :ensure t)
+#+end_src
+**** Language: Rust
+The mode doesn't really come with Emacs:
+TODO: Fix this
+#+begin_src emacs-lisp
+  (use-package rust-mode
+    :ensure t)
+#+end_src
+**** Language: Clojure
+The mode doesn't really come with Emacs:
+TODO: Fix this
+#+begin_src emacs-lisp
+  (use-package cider
     :ensure t)
 #+end_src
 **** Mode: Crontab
