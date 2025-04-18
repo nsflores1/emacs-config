@@ -1,5 +1,6 @@
 # Compiled
 *.elc
+*.eln
 
 # Packaging
 .cask/
@@ -22,6 +23,13 @@ elpaca/
 straight/
 
 # Junk
+desktop/
+history
+auto-save-list
+forge-database.sqlite
+transient
+recentf
+places
 custom.el
 README.el
 places

@@ -102,6 +102,10 @@ These need to go first because if something fails later I need these loaded. Abs
   (setopt auto-revert-check-vc-info t)
   (global-auto-revert-mode)
 
+  ;; use macos trash
+  (setopt delete-by-moving-to-trash t)
+
+
   ;; move through windows with Ctrl-<arrow keys>
   (windmove-default-keybindings 'control)
 
@@ -142,8 +146,27 @@ These need to go first because if something fails later I need these loaded. Abs
     (when (boundp 'use-short-answers)
       (setopt use-short-answers t)))
 
-  ;; remember where we are
+  ;; remember where we are and what we're doing
   (save-place-mode 1)
+  (setq history-length 1000
+	recentf-max-saved-items 1000)
+  (recentf-mode 1)
+  (savehist-mode 1)
+
+  ;; desktop mode for saving sessions
+  (setq desktop-dirname             "~/.emacs.d/desktop"
+	desktop-base-file-name      "session.el"
+	desktop-base-lock-name      "session.lock"
+	desktop-path                (list desktop-dirname)
+	desktop-save                t
+	desktop-load-locked-desktop nil
+	desktop-auto-save-timeout   30)
+  (setq desktop-files-not-to-save "^$") ;; don’t skip tramp etc
+  (make-directory desktop-dirname t)
+  (desktop-save-mode 1)
+  (when (file-exists-p (desktop-full-file-name))
+    (desktop-read))
+  (add-hook 'kill-emacs-hook #'(lambda () (desktop-save-in-desktop-dir)))
 
   ;; always use UTF-8
   (prefer-coding-system 'utf-8)
@@ -165,6 +188,20 @@ These need to go first because if something fails later I need these loaded. Abs
   ;; when we're a mac, use mdfind not find
   (when *is-a-mac*
     (setq-default locate-command "mdfind"))
+
+  ;; make TRAMP faster
+  (use-package tramp
+    :config
+    (connection-local-set-profile-variables
+     'remote-direct-async-process
+     '((tramp-direct-async-process . t)))
+    (connection-local-set-profiles
+     '(:application tramp :protocol "ssh")
+     'remote-direct-async-process)
+    ;; Tips to speed up connections
+    (setq tramp-verbose 0)
+    (setq tramp-chunksize 2000)
+    (setq tramp-ssh-controlmaster-options nil))
 #+end_src
 *** Utility Functions
 These are things that I use that are nice to have but aren't part of GNU Emacs.
@@ -327,12 +364,11 @@ I quite like the dark VSCode and Solarized theme, so we'll use that.
 	  solarized-distinct-doc-face t
 	  solarized-distinct-fringe-background t
 	  solarized-emphasize-indicators t
-	  x-underline-at-descent-line t))
+	  x-underline-at-descent-line t)
+    (load-theme 'solarized-selenized-black t))
   (use-package vscode-dark-plus-theme
     :ensure t
-    :demand t
-    :config
-    (load-theme 'vscode-dark-plus t))
+    :demand t)
 #+end_src
 **** ~smooth-scrolling~
 This is the best package at least on macOS, and probably the best on Linux too.
@@ -461,6 +497,15 @@ Makes ~org-mode~ have some prettier-looking bullet points!
     :diminish
     :config
     (add-hook 'org-mode-hook (lambda () (org-superstar-mode 1))))
+#+end_src
+**** ~dired-fl~: Extra ~dired~ Fonts
+This adds some special fonts to the ~dired~ mode to make it nicer.
+#+begin_src emacs-lisp
+  (use-package diredfl
+    :ensure t
+    :diminish
+    :init
+    (diredfl-global-mode))
 #+end_src
 *** Packages: Overhauls
 Some parts of Emacs are fundamentally broken. These packages replace those features outright with new things. I note what's being replaced.
