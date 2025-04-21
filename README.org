@@ -93,7 +93,9 @@ We didn't have the frame loaded and rendered in until this point, so we couldn't
 *** Behavior Fixes
 These need to go first because if something fails later I need these loaded. Absolutely vital that this works.
 #+begin_src emacs-lisp
-  ; need for code snippets
+  ; genuinely baffling how this isn't the default
+  (global-set-key (kbd "C-x C-b") 'ibuffer)
+  ;need for code snippets
   (require 'org-tempo)
 
   ; reread files from disk
@@ -351,7 +353,7 @@ Extremely useful when you've got a lot of these on the screen.
 *** Packages: Appearance
 This category is for packages which make Emacs' interface look nicer.
 **** Themes: ~solarized~, ~vscode-dark-plus~
-I quite like the dark VSCode and Solarized theme, so we'll use that.
+I quite like the dark VSCode and Solarized themes, so we'll use that.
 #+begin_src emacs-lisp
   ; ignore asking if custom themes are safe
   (setq custom-safe-themes t)
@@ -364,11 +366,54 @@ I quite like the dark VSCode and Solarized theme, so we'll use that.
 	  solarized-distinct-doc-face t
 	  solarized-distinct-fringe-background t
 	  solarized-emphasize-indicators t
-	  x-underline-at-descent-line t)
-    (load-theme 'solarized-selenized-black t))
+	  x-underline-at-descent-line t))
+    ;(load-theme 'solarized-selenized-black t)
+
   (use-package vscode-dark-plus-theme
     :ensure t
+    :demand t
+    :init
+    (load-theme 'vscode-dark-plus t))
+
+  (use-package night-owl-theme
+    :ensure t
     :demand t)
+#+end_src
+**** Modeline: ~telephone-line~
+It's a bit nicer looking than the powerbars, which are too flashy for me.
+#+begin_src emacs-lisp
+  (use-package telephone-line
+    :ensure t
+    :demand t
+    :if window-system
+    :diminish telephone-line-mode
+    :config
+    (setq telephone-line-lhs
+	  '((evil   . (telephone-line-flycheck-segment))
+	    (accent . (telephone-line-vc-segment
+		       telephone-line-process-segment))
+	    (nil    . (telephone-line-projectile-segment
+		       telephone-line-buffer-segment)))
+	  telephone-line-rhs
+	  '((nil    . (telephone-line-position-segment
+		       telephone-line-misc-info-segment))
+	    (accent . (telephone-line-major-mode-segment))
+	    (evil   . (telephone-line-minor-mode-segment)))
+	  telephone-line-height 24
+	  ;; different layouts don't render well on macOS.
+	  telephone-line-primary-left-separator 'telephone-line-nil
+	  telephone-line-secondary-left-separator 'telephone-line-nil
+	  telephone-line-primary-right-separator 'telephone-line-nil
+	  telephone-line-secondary-right-separator 'telephone-line-nil)
+    (telephone-line-mode 1))
+#+end_src
+**** ~solaire~
+Makes the buffers that aren't part of real files a different color than those that are.
+#+begin_src emacs-lisp
+  (use-package solaire-mode
+    :ensure t
+    :config
+    (solaire-global-mode +1))
 #+end_src
 **** ~smooth-scrolling~
 This is the best package at least on macOS, and probably the best on Linux too.
@@ -498,7 +543,7 @@ Makes ~org-mode~ have some prettier-looking bullet points!
     :config
     (add-hook 'org-mode-hook (lambda () (org-superstar-mode 1))))
 #+end_src
-**** ~dired-fl~: Extra ~dired~ Fonts
+**** ~dired-fl~
 This adds some special fonts to the ~dired~ mode to make it nicer.
 #+begin_src emacs-lisp
   (use-package diredfl
@@ -638,12 +683,14 @@ This is a magical package that allows for any matching string to work in a searc
 #+end_src
 **** ~corfu~: In-Buffer Completion
 This is popup completion, which is a feature GNU Emacs has but doesn't use well.
+It's a good replacement for ~company~.
 #+begin_src emacs-lisp
   (use-package corfu
     :ensure t
     :diminish corfu-mode corfu-popupinfo-mode
     :init
     (global-corfu-mode)
+    (corfu-history-mode)
     (corfu-popupinfo-mode)
     :bind (:map corfu-map ("RET" . nil))
     ;; if we use eshell, be careful not to autocomplete
@@ -666,6 +713,7 @@ This is popup completion, which is a feature GNU Emacs has but doesn't use well.
     (corfu-history-mode 1))
 #+end_src
 We also want some popups and to have it work in the terminal:
+TODO: this is fixed in Emacs 31.
 #+begin_src emacs-lisp
   (use-package corfu-terminal
     :if (not (display-graphic-p))
@@ -673,6 +721,16 @@ We also want some popups and to have it work in the terminal:
     :diminish
     :config
     (corfu-terminal-mode))
+#+end_src
+**** ~cape~: More Completions For ~corfu~
+~corfu~ ships with a lot of built in configurations but it's still missing a lot of the functionality that ~company~ ships with. This package adds that back in so that it works properly. I don't want to trigger these manually, so I handle them all through ~corfu~.
+#+begin_src emacs-lisp
+  (use-package cape
+    :ensure t
+    :init
+    (add-hook 'completion-at-point-functions #'cape-dabbrev)
+    (add-hook 'completion-at-point-functions #'cape-file)
+    (add-hook 'completion-at-point-functions #'cape-history))
 #+end_src
 **** ~helpful~: Help System
 #+begin_src emacs-lisp
@@ -706,6 +764,33 @@ Moves to the next logical line position, not just to the end of the line.
     :config
     (global-set-key (kbd "C-a") 'mwim-beginning)
     (global-set-key (kbd "C-e") 'mwim-end))
+#+end_src
+**** ~pdf-tools~: Replacement of ~docview~
+The existing document viewer is terrible. This is a bit better, but it does require being compiled, so it will almost certainly break on Windows.
+#+begin_src emacs-lisp
+  (use-package pdf-tools
+    :ensure t
+    :init
+    (pdf-loader-install))
+#+end_src
+We should also remember our position within those documents:
+#+begin_src emacs-lisp
+  (use-package pdf-view-restore
+    :ensure t
+    :after pdf-tools
+    :diminish
+    :init
+    (setq pdf-view-restore-filename "~/.emacs.d/pdf-view-restore")
+    (add-hook 'pdf-view-mode-hook 'pdf-view-restore-mode))
+#+end_src
+**** ~visual-regexp~: Replacement of ~regexp~
+Why use Emacs's ancient regexp format when we can use the much better ones that come with Python? We'll replace only the stuff we're not replacing elsewhere.
+#+begin_src emacs-lisp
+  (use-package visual-regexp-steroids
+    :ensure t
+    :if (executable-find "python3")
+    :init
+    (require 'visual-regexp-steroids))
 #+end_src
 *** Packages: Additions
 These packages add brand-new features and modes to Emacs.
@@ -842,11 +927,16 @@ TODO: Fix this
     :ensure t
     :mode "\\.json\\'")
 #+end_src
-**** Mode: YAML Files
+**** Mode: YAML Files & Ansible
 #+begin_src emacs-lisp
   (use-package yaml-mode
     :ensure t
     :mode "\\.yml\\.erb\\'")
+
+  (use-package ansible
+    :ensure t
+    :init
+    (add-hook 'yaml-mode-hook '(lambda () (ansible-mode 1))))
 #+end_src
 **** Mode: Unix Log
 #+begin_src emacs-lisp
