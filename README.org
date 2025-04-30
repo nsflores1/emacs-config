@@ -42,7 +42,7 @@ The default ~package.el~ is disabled by ~early-init.el~. But we still need to de
 	    ("org" . "https://orgmode.org/elpa/")
 	    ("nongnu" . "https://elpa.nongnu.org/nongnu/")))
 
-    (package-initialize)
+  (package-initialize)
 #+end_src
 And then install ~diminish~ and ~vc-use-package~ since we'll call it a lot later:
 #+begin_src emacs-lisp
@@ -162,7 +162,9 @@ These need to go first because if something fails later I need these loaded. Abs
 	desktop-path                (list desktop-dirname)
 	desktop-save                t
 	desktop-load-locked-desktop nil
-	desktop-auto-save-timeout   30)
+	desktop-restore-eager 20
+	desktop-restore-frames t
+	desktop-auto-save-timeout 30)
   (setq desktop-files-not-to-save "^$") ;; don’t skip tramp etc
   (make-directory desktop-dirname t)
   (desktop-save-mode 1)
@@ -350,6 +352,42 @@ Extremely useful when you've got a lot of these on the screen.
     :bind
     ("C-x o". switch-window))
 #+end_src
+**** ~osx-clipboard-mode~
+Allows the use of the macOS clipboard, even if we're not on the terminal
+#+begin_src emacs-lisp
+  (use-package osx-clipboard
+    :if (and (not (window-system)) *is-a-mac*)
+    :ensure t
+    :diminish
+    :init
+    (osx-clipboard-mode +1))
+#+end_src
+**** ~restart-emacs~
+Restart Emacs from within Emacs! Useful for config updates.
+#+begin_src emacs-lisp
+  (use-package restart-emacs
+    :ensure t)
+#+end_src
+**** ~edit-indirect~
+Allows for editing a part of a buffer in another buffer.
+#+begin_src emacs-lisp
+  (use-package edit-indirect
+    :ensure t)
+#+end_src
+**** ~quickrun~
+The equivalent of clicking the big "Run" button in an IDE. Basically compiles and executes the buffer.
+#+begin_src emacs-lisp
+  (use-package quickrun
+    :ensure t)
+#+end_src
+**** ~makefile-executor~
+Allows us to execute certain targets at any buffer in a project.
+#+begin_src emacs-lisp
+  (use-package makefile-executor
+    :ensure t
+    :config
+    (add-hook 'makefile-mode-hook 'makefile-executor-mode))
+#+end_src
 *** Packages: Appearance
 This category is for packages which make Emacs' interface look nicer.
 **** Themes: ~solarized~, ~vscode-dark-plus~
@@ -398,7 +436,8 @@ It's a bit nicer looking than the powerbars, which are too flashy for me.
 	  '((nil    . (telephone-line-position-segment
 		       telephone-line-misc-info-segment))
 	    (accent . (telephone-line-major-mode-segment))
-	    (evil   . (telephone-line-minor-mode-segment)))
+	    ;; I used to put minor mode here but it's way too annoying in practice
+	    (evil   . (telephone-line-misc-info-segment)))
 	  telephone-line-height 24
 	  ;; different layouts don't render well on macOS.
 	  telephone-line-primary-left-separator 'telephone-line-nil
@@ -552,6 +591,36 @@ This adds some special fonts to the ~dired~ mode to make it nicer.
     :init
     (diredfl-global-mode))
 #+end_src
+**** ~pangu-spacing~
+Improves aesthetics of having Japanese characters and English ones side by side. 美しい日本語入力!
+#+begin_src emacs-lisp
+  (use-package pangu-spacing
+    :ensure t
+    :diminish
+    :init
+    (global-pangu-spacing-mode 1))
+#+end_src
+**** ~kind-icon~
+Despite the name we never actually use any icons, at least not on the terminal. This just adds a little symbol to ~corfu~ that shows you what exactly you're completing.
+#+begin_src emacs-lisp
+  (use-package kind-icon
+    :ensure t
+    :after corfu
+    ;:custom
+    ; (kind-icon-blend-background t)
+    ; (kind-icon-default-face 'corfu-default) ; only needed with blend-background
+    :config
+    (add-to-list 'corfu-margin-formatters #'kind-icon-margin-formatter))
+#+end_src
+**** ~fancy-compile~
+Running the ~compile~ command now does more useful things with better syntax highlighting.
+#+begin_src emacs-lisp
+  (use-package fancy-compilation
+    :ensure t
+    :diminish
+    :init
+    (fancy-compilation-mode))
+#+end_src
 *** Packages: Overhauls
 Some parts of Emacs are fundamentally broken. These packages replace those features outright with new things. I note what's being replaced.
 **** ~eat~: Replacement of ~ansi-term~
@@ -633,7 +702,7 @@ These commands completely replace their stock components with upgrades.
     :bind (
 	   ;; Drop-in replacements
 	   ("C-x b" . consult-buffer)     ; orig. switch-to-buffer
-	   ("M-y"   . consult-yank-pop)   ; orig. yank-pop
+	   ("M-y"   . consult-yank-from-kill-ring)   ; orig. yank-pop
 	   ;; Searching
 	   ("M-s r" . consult-ripgrep)
 	   ("M-s l" . consult-line)       ; Alternative: rebind C-s to use
@@ -792,6 +861,58 @@ Why use Emacs's ancient regexp format when we can use the much better ones that 
     :init
     (require 'visual-regexp-steroids))
 #+end_src
+**** ~undo-fu~: Better Undo
+Emacs undo can be confusing and it also doesn't persist for all of time, which is an amazing thing to have. Let's add that.
+#+begin_src emacs-lisp
+  (use-package undo-fu
+    :ensure t
+    :config
+    (global-unset-key (kbd "C-z"))
+    (global-set-key (kbd "C-z")   'undo-fu-only-undo)
+    (global-set-key (kbd "C-S-z") 'undo-fu-only-redo)
+    :init
+    ;; we have like so much ram nowadays
+    (setq undo-limit 67108864)
+    (setq undo-strong-limit 100663296)
+    (setq undo-outer-limit 1006632960))
+
+  (use-package undo-fu-session
+    :ensure t
+    :diminish
+    :init
+    (undo-fu-session-global-mode))
+#+end_src
+**** ~vundo~: Undo in a Tree
+It's hard to mentally picture all the undos, but since we already have infinity undo state, it might be nice to do that
+#+begin_src emacs-lisp
+  (use-package vundo
+    :ensure t
+    :init
+    (setq diff-switches "-u --color=never")
+    (setq vundo-glyph-alist vundo-unicode-symbols))
+#+end_src
+**** ~yasnippet~: Dynamic templates
+This saves typing a lot of the same things over and over again by automatically completing them. This is really useful in more verbose languages.
+#+begin_src emacs-lisp
+  (use-package yasnippet
+    :ensure t
+    :diminish yas-mode
+    :config
+    (yas-global-mode 1))
+
+  ;; the actual snippets
+  (use-package yasnippet-snippets
+    :ensure t
+    :after yasnippet)
+#+end_src
+What's really nice is that we don't even really need to know them. We can just magically filter through them with some good old fashioned ~completion-at-point~ magic:
+#+begin_src emacs-lisp
+  (use-package yasnippet-capf
+    :ensure t
+    :after cape
+    :config
+    (add-to-list 'completion-at-point-functions #'yasnippet-capf))
+#+end_src
 *** Packages: Additions
 These packages add brand-new features and modes to Emacs.
 **** ~magit~: A Git Client
@@ -835,6 +956,14 @@ Shows what has changed between Git commits. This doesn't work without a graphica
        (ignored . "i"))))
 
 #+end_src
+**** Language: MATLAB
+To be honest, I think I can make this do more, such as having MATLAB as a language server. How exactly is a bit difficult. This code seems to maybe have some answers? `https://github.com/karthink/.emacs.d/blob/master/init.el#L1660`
+
+TODO: improve this
+#+begin_src emacs-lisp
+  (use-package matlab-mode
+    :ensure t)
+#+end_src
 **** Language: Python
 The actual mode is bundled with Emacs. This fixes syntax:
 #+begin_src emacs-lisp
@@ -848,6 +977,18 @@ And this lets us edit PIP standards:
 #+begin_src emacs-lisp
   (use-package pip-requirements
     :ensure t)
+#+end_src
+Useful for when we have a simple program and want to immediately test it:
+#+begin_src emacs-lisp
+  (use-package live-py-mode
+    :ensure t
+    :hook (python-mode . (lambda () (require 'live-py-mode))))
+#+end_src
+And in the rare case we actually need to do this...
+#+begin_src emacs-lisp
+  (use-package pyenv-mode
+    :ensure t
+    :hook (python-mode . pyenv-mode))
 #+end_src
 **** Language: Go
 The mode doesn't really come with Emacs:
@@ -879,6 +1020,46 @@ TODO: Fix this
 #+begin_src emacs-lisp
   (use-package cider
     :ensure t)
+#+end_src
+**** Language: Nix
+This mode brings a lot to the table, but almost never actually need all it brings.
+#+begin_src emacs-lisp
+  (use-package nix-mode
+    :ensure t
+    :mode "\\.nix\\'")
+#+end_src
+*** Packages: Modes
+These are all the things that are needed for occasional, one-off editing and rarely matter all that much. They're kept around because on that blue moon where I actually need to edit one of these obscure types in Emacs, it's there.
+**** Mode: Cask
+For developing Elisp, not the one used in macOS Homebrew.
+#+begin_src emacs-lisp
+  (use-package cask-mode
+    :ensure t)
+#+end_src emacs-lisp
+**** Mode: CMake
+#+begin_src emacs-lisp
+  (use-package cmake-mode
+    :ensure t)
+#+end_src
+**** Mode: Apache Config
+#+begin_src emacs-lisp
+  (use-package apache-mode
+    :ensure t)
+#+end_src
+**** Mode: BASIC
+Hopefully this will never, ever be needed.
+#+begin_src emacs-lisp
+  (use-package basic-mode
+    :ensure t
+    :mode "\\.bas\\'")
+#+end_src
+**** Mode: AppleScript
+AppleScript is not great.
+#+begin_src emacs-lisp
+  (use-package applescript-mode
+    :ensure t
+    :init
+    (add-to-list 'auto-mode-alist '("\\.applescript$" . applescript-mode)))
 #+end_src
 **** Mode: Crontab
 #+begin_src emacs-lisp
@@ -972,3 +1153,11 @@ TODO: Fix this
     :ensure t
     :mode "\\.tmux.conf\\'")
 #+end_src
+**** Mode: robots.txt
+#+begin_src emacs-lisp
+  (use-package robots-txt-mode
+    :ensure t
+    :init
+    (add-to-list 'auto-mode-alist '("robots.txt" . robots-txt-mode)))
+#+end_src
+

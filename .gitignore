@@ -14,8 +14,9 @@ dist/
 # Backup files
 *~
 
-# Undo-tree save-files
+# Undo save-files
 *.~undo-tree
+undo-fu-session/
 
 # Package stores
 elpa/
@@ -33,3 +34,4 @@ places
 custom.el
 README.el
 places
+.cache
