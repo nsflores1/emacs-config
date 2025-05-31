@@ -35,3 +35,8 @@ custom.el
 README.el
 places
 .cache
+.dap-breakpoints
+.lsp-session-v1
+eclipse.jdt.ls/
+tree-sitter
+workspace

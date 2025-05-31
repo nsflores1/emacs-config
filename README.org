@@ -1,11 +1,13 @@
 * Personal Emacs Configuration 🏡
 This repository contains the setup for an Emacs configuration, tailored for my use. It has features well suited for:
 - Rust
-- Common Lisp
 - Python
+- Systems administration
 - General editing
 
-It works best on macOS and in a graphical frame. For the best experience, use Mitsuharu's Emacs macOS port, or a pureGTK build on Linux. Currently, it works on Emacs versions `29` and `28`.
+It works best on macOS and in a graphical frame. For the best experience, use Mitsuharu's Emacs macOS port, or a pureGTK build on Linux. Currently, it only works on Emacs versions newer than 28.
+
+I created this rather than using an existing configuration because when something breaks, most configurations are so opaque that it's unclear what parts feed into each other. The goal of this configuration is that each part is obvious, separated, and transparent in what it's doing, so that you can figure it out and quickly fix it yourself rather than ~grep~-ping through a thousand different ~.el~ files to find the bug.  
 
 The whole configuration lives in this file, so just scroll down!
 
@@ -18,20 +20,23 @@ Firstly, make sure the following programs are installed:
 - ~fish~, used to make completion files for ~eshell~ (optional)
 - ~aspell~, used for enabling spellcheck (optional)
 - Any specific language servers/packages needed by certain modes:
-  - Shell: ~checkbashisms~
-  - LaTeX: ~texlab~
-  - Common Lisp: ~sbcl~
+  - Shell: ~checkbashisms~ (optional)
+  - LaTeX: ~texlab~ (or any other language server)
+  - Common Lisp: ~sbcl~ (or any other implementation)
   - Markdown: ~markdown~
   - Rust: ~rust-analyzer~
-  - Python: ~black~
+  - Python: ~black~ and ~pyright~ (all the other ones don't work)
   - Go: ~gopls~
+  - Java: ~maven~, ~jdtls~, ~openjvm~ (obviously)
   
-Ideally in a future version of this config, it would prompt you to install these, but that's currently not the case.
+Ideally in a future version of this configuration, it would prompt you to install these, but that's currently not the case. I'll fix that eventually.
 
 ~git clone~ this into ~~/.emacs.d~, then start Emacs. This will take some time on initial startup, but after the first boot this process should become substantially faster. It works on *my* machine, but I make no guarantees that this will be the case on yours!
 ** Things To Improve 🤔
 - Elpaca when that becomes less broken (or I can update Emacs)
 - Update this to use the new features in Emacs 30
+- Make sure that Emacs makes sure you have all the packages you need, and gracefully degrades on failure
+- Add ensures by default rather than typing it manually
 ** The Actual Configuration 📖
 *** Package Manager & Key Tools
 The default ~package.el~ is disabled by ~early-init.el~. But we still need to define our repos:
@@ -104,10 +109,6 @@ These need to go first because if something fails later I need these loaded. Abs
   (setopt auto-revert-check-vc-info t)
   (global-auto-revert-mode)
 
-  ;; use macos trash
-  (setopt delete-by-moving-to-trash t)
-
-
   ;; move through windows with Ctrl-<arrow keys>
   (windmove-default-keybindings 'control)
 
@@ -120,15 +121,13 @@ These need to go first because if something fails later I need these loaded. Abs
 
   ;; don't litter file system with *~ backup files; put them all inside
   ;; ~/.emacs.d/backup or wherever
-  (defun personal/backup-file-name (fpath)
-    "Return a new file path of a given file path.
-  If the new path's directories does not exist, create them."
-    (let* ((backupRootDir (concat user-emacs-directory "emacs-backup/"))
-	   (filePath (replace-regexp-in-string "[A-Za-z]:" "" fpath )) ; remove Windows driver letter in path
-	   (backupFilePath (replace-regexp-in-string "//" "/" (concat backupRootDir filePath "~") )))
-      (make-directory (file-name-directory backupFilePath) (file-name-directory backupFilePath))
-      backupFilePath))
-  (setopt make-backup-file-name-function 'personal/backup-file-name)
+  (let ((auto-dir (expand-file-name "autosaves/" user-emacs-directory))
+	(backup-dir (expand-file-name "backups/" user-emacs-directory)))
+    (dolist (dir (list auto-dir backup-dir))
+      (unless (file-exists-p dir) (make-directory dir t)))
+    (setq backup-directory-alist `(("." . ,backup-dir))
+	  auto-save-file-name-transforms `((".*" ,auto-dir t))
+	  auto-save-list-file-prefix (concat auto-dir ".saves-")))
 
   ;; highlight urls
   ;; if we don't set it this way, xwidget breaks
@@ -206,6 +205,13 @@ These need to go first because if something fails later I need these loaded. Abs
     (setq tramp-verbose 0)
     (setq tramp-chunksize 2000)
     (setq tramp-ssh-controlmaster-options nil))
+
+  ;; fix the ls related issues on macOS & Unix
+  (if (or *is-a-mac* *is-a-haiku* *is-a-unix*)
+      (progn
+	(setq ls-lisp-use-insert-directory-program nil
+	      dired-use-ls-dired nil)
+	(require 'ls-lisp)))
 #+end_src
 *** Utility Functions
 These are things that I use that are nice to have but aren't part of GNU Emacs.
@@ -268,6 +274,18 @@ These are things that I use that are nice to have but aren't part of GNU Emacs.
 #+end_src
 *** Packages: Utility
 This category is for packages which extend Emacs without adding brand new features. Basically just overhauls of existing features.
+**** ~osx-trash~
+Really nice fix for the fact that stock Emacs can't do this.
+#+begin_src emacs-lisp
+  (use-package osx-trash
+    :ensure t
+    :if *is-a-mac*
+    :init
+    (if (executable-find "trash")
+      (setq osx-trash-command "trash"))
+    (osx-trash-setup))
+  (setopt delete-by-moving-to-trash t)
+#+end_src
 **** ~which-key~
 #+begin_src emacs-lisp
   (use-package which-key
@@ -276,11 +294,21 @@ This category is for packages which extend Emacs without adding brand new featur
     :config
     (which-key-mode))
 #+end_src
-**** ~sudo-edit~
+**** ~sudo-edit~ & ~auto-sudoedit~
+We want to be able to edit as root, but only on Unix and Linux.
 #+begin_src emacs-lisp
   (use-package sudo-edit
-    :if *is-a-linux*
+    :if (or *is-a-linux* *is-a-unix*)
     :ensure t)
+#+end_src
+Also, automatically retry if we can't do it for whatever reason.
+#+begin_src emacs-lisp
+  (use-package auto-sudoedit
+    :ensure t
+    :diminish
+    :init
+    (require 'auto-sudoedit)
+    (auto-sudoedit-mode 1))
 #+end_src
 **** ~exec-path-from-shell~
 We run it as non-interactive because Anaconda, if we have it installed, will slow down Emacs.
@@ -433,10 +461,10 @@ It's a bit nicer looking than the powerbars, which are too flashy for me.
 	    (nil    . (telephone-line-projectile-segment
 		       telephone-line-buffer-segment)))
 	  telephone-line-rhs
-	  '((nil    . (telephone-line-position-segment
-		       telephone-line-misc-info-segment))
+	  '((nil    . (telephone-line-position-segment))
 	    (accent . (telephone-line-major-mode-segment))
-	    ;; I used to put minor mode here but it's way too annoying in practice
+	    ;; I used to put minor mode here but it's way too annoying in practice.
+	    ;; This is where our LSP info will live
 	    (evil   . (telephone-line-misc-info-segment)))
 	  telephone-line-height 24
 	  ;; different layouts don't render well on macOS.
@@ -606,8 +634,8 @@ Despite the name we never actually use any icons, at least not on the terminal. 
   (use-package kind-icon
     :ensure t
     :after corfu
-    ;:custom
-    ; (kind-icon-blend-background t)
+    :custom
+    (kind-icon-use-icons nil)
     ; (kind-icon-default-face 'corfu-default) ; only needed with blend-background
     :config
     (add-to-list 'corfu-margin-formatters #'kind-icon-margin-formatter))
@@ -624,16 +652,35 @@ Running the ~compile~ command now does more useful things with better syntax hig
 *** Packages: Overhauls
 Some parts of Emacs are fundamentally broken. These packages replace those features outright with new things. I note what's being replaced.
 **** ~eat~: Replacement of ~ansi-term~
-There's no need for ~vterm~ because honestly this thing is so fast it's good enough for almost every use case.
+Fine on every OS but is a bit slower than ~vterm~.
 #+begin_src emacs-lisp
   (use-package eat
     :ensure t
     :custom
     (eat-term-name "xterm")
-    :config
-    (eat-eshell-mode)                    
-    (eat-eshell-visual-command-mode))
+    :init
+    (add-hook 'eshell-load-hook #'eat-eshell-mode)
+    (add-hook 'eshell-load-hook #'eat-eshell-visual-command-mode))
 #+end_src
+**** ~vterm~: Another Replacement of ~ansi-term~
+Faster but requires the compiled module so this can fail quite dramatically.
+#+begin_src emacs-lisp
+  (use-package vterm
+    :ensure t
+    :if (not *is-a-windows*))
+#+end_src
+**** ~multi-term~ & ~multi-vterm~: Summon Many Terminals
+We often need more than one terminal when we're doing things. Let's add that:
+#+begin_src emacs-lisp
+  (use-package multi-term
+    :ensure t)
+#+end_src
+Oh, and add that for ~vterm~, too:
+#+begin_src emacs-lisp
+  (use-package multi-vterm
+    :ensure t)
+#+end_src
+This is such a good feature that stock ~vterm~ should never be used, only ~multi-vterm~.
 **** ~jinx~: Replacement of ~flyspell~
 Flyspell is the worst. This is a much better alternative with almost no downsides. We'll also fix our dictionary while we're at it.
 #+begin_src emacs-lisp
@@ -776,6 +823,8 @@ It's a good replacement for ~company~.
     (add-hook 'minibuffer-setup-hook #'corfu-enable-always-in-minibuffer 1)
     ;; automatic completion!
     (setq corfu-auto t
+	  ;; I don't care what the warnings say, this setting rules
+	  corfu-auto-prefix 2
 	  corfu-quit-no-match 'separator
 	  corfu-echo-documentation nil)
     ;; turn on corfu's plugins
@@ -891,11 +940,13 @@ It's hard to mentally picture all the undos, but since we already have infinity 
     (setq diff-switches "-u --color=never")
     (setq vundo-glyph-alist vundo-unicode-symbols))
 #+end_src
-**** ~yasnippet~: Dynamic templates
+**** ~yasnippet~: Dynamic templates, replace the macro system
+TODO: remove or rework this, I never use it
 This saves typing a lot of the same things over and over again by automatically completing them. This is really useful in more verbose languages.
 #+begin_src emacs-lisp
   (use-package yasnippet
     :ensure t
+    :disabled t
     :diminish yas-mode
     :config
     (yas-global-mode 1))
@@ -903,16 +954,42 @@ This saves typing a lot of the same things over and over again by automatically 
   ;; the actual snippets
   (use-package yasnippet-snippets
     :ensure t
+    :disabled t
     :after yasnippet)
 #+end_src
 What's really nice is that we don't even really need to know them. We can just magically filter through them with some good old fashioned ~completion-at-point~ magic:
 #+begin_src emacs-lisp
   (use-package yasnippet-capf
     :ensure t
+    :disabled t
     :after cape
     :config
     (add-to-list 'completion-at-point-functions #'yasnippet-capf))
 #+end_src
+**** ~tree-sitter~: Every Major Mode
+This is technically in Emacs now, but the version it ships with can sometimes be woefully out of date.
+#+begin_src emacs-lisp
+  (use-package tree-sitter
+    :ensure t
+    :diminish
+    :init
+    (global-tree-sitter-mode)
+    (add-hook 'tree-sitter-after-on-hook #'tree-sitter-hl-mode))
+
+  (use-package tree-sitter-langs
+    :ensure t
+    :after tree-sitter)
+#+end_src
+And, when we can, we can try to switch to an upgraded mode:
+#+begin_src emacs-lisp
+  (use-package treesit-auto
+    :ensure t
+    :custom
+    (treesit-auto-install 'prompt)
+    :config
+    (treesit-auto-add-to-auto-mode-alist 'all)
+    (global-treesit-auto-mode))
+#+end_src 
 *** Packages: Additions
 These packages add brand-new features and modes to Emacs.
 **** ~magit~: A Git Client
@@ -920,7 +997,7 @@ A complete Git client is a pretty amazing thing.
 #+begin_src emacs-lisp
   (use-package magit
     :ensure t
-    :bind (("C-x g" . magit-status)))
+    :bind ("C-x g" . magit-status))
 #+end_src
 We'll also grab a few bonus features as well:
 #+begin_src emacs-lisp
@@ -939,7 +1016,7 @@ Like ~magit~ but for GitHub. Invaluable.
     :after magit)
 #+end_src
 **** ~diff-hl~: Changes in Fringes
-Shows what has changed between Git commits. This doesn't work without a graphical frame and it doesn't work on non-version controlled files.
+Shows what has changed between Git commits. This doesn't work without a graphical frame and it doesn't work on non-version controlled files. It's in the right fringe because nothing useful ever happens there and that's where we want all that good info anyways.
 #+begin_src emacs-lisp
   (use-package diff-hl
     :ensure t
@@ -953,8 +1030,73 @@ Shows what has changed between Git commits. This doesn't work without a graphica
        (delete . "-")
        (change . "*")
        (unknown . "?")
-       (ignored . "i"))))
+       (ignored . "i")))
+    :init
+    (setq-default diff-hl-side 'right))
 
+#+end_src
+**** ~treesit-fold~: Folding in Fringes
+So shockingly Emacs doesn't ship with code folding outside of Org. This fixes this.
+#+begin_src emacs-lisp
+  (use-package treesit-fold
+    :ensure t
+    :diminish global-treesit-fold-indicators-mode
+    :init
+    (global-treesit-fold-indicators-mode))
+#+end_src
+**** ~lsp-mode~: Language Server Protocol Support
+We are installing as few ~flycheck~ modes as possible, this is basically our only backend. 
+#+begin_src emacs-lisp
+  (use-package lsp-mode
+    :ensure t
+    :init
+    (setq lsp-keymap-prefix "C-c l"
+	  ;; override the completion with corfu
+	  lsp-completion-provider :none
+	  lsp-completion-enable t
+	  ;; turn off all this visual junk
+	  lsp-headerline-breadcrumb-enable nil
+	  lsp-ui-sideline-enable nil ;; TODO: maybe change this?
+	  lsp-auto-guess-root t)
+    (defun personal/lsp-mode-setup-completion ()
+      (setf (alist-get 'styles (alist-get 'lsp-capf completion-category-defaults))
+	    '(orderless)))
+    (add-hook 'lsp-completion-mode-hook #'personal/lsp-mode-setup-completion)
+    :hook ((python-mode . lsp)
+	   (java-mode . lsp)
+	   (lsp-mode . lsp-enable-which-key-integration)))
+
+  (use-package lsp-ui
+    :ensure t
+    :after lsp-mode
+    :config
+    (setq lsp-ui-doc-enable t
+	  lsp-ui-doc-delay 0.5
+	  lsp-ui-doc-show-with-cursor t
+	  lsp-ui-doc-position 'at-point))
+
+  (use-package dap-mode
+    :ensure t
+    :after lsp-mode
+    :config
+    (dap-auto-configure-mode))  
+#+end_src
+**** ~ellama~: AI Programming
+AI peer programming is cool sometimes. Try to use this minimally (it makes you dumber), and DeepSeek's model is Good Enough for the vast majority of my simple needs. So you'll need to pull it using ~ollama~ obviously.
+#+begin_src emacs-lisp
+  (use-package ellama
+    :ensure t
+    :diminish 
+    :bind ("C-c e" . ellama)
+    ;; send last message in chat buffer with C-c C-c
+    :hook (org-ctrl-c-ctrl-c-final . ellama-chat-send-last-message)
+    :init (setopt ellama-auto-scroll t)
+    :config
+    ;; show ellama context in header line in all buffers
+    ;;(ellama-context-header-line-global-mode +1)
+    ;; show ellama session id in header line in all buffers
+    ;;(ellama-session-header-line-global-mode +1)
+    )
 #+end_src
 **** Language: MATLAB
 To be honest, I think I can make this do more, such as having MATLAB as a language server. How exactly is a bit difficult. This code seems to maybe have some answers? `https://github.com/karthink/.emacs.d/blob/master/init.el#L1660`
@@ -965,7 +1107,39 @@ TODO: improve this
     :ensure t)
 #+end_src
 **** Language: Python
-The actual mode is bundled with Emacs. This fixes syntax:
+The actual mode is bundled with Emacs, but the default interpreter is trash. Let's use the better one:
+#+begin_src emacs-lisp
+  (when (executable-find "ipython")
+    (setq python-shell-interpreter "ipython"
+	  python-shell-interpreter-args "-i --simple-prompt"))
+#+end_src 
+I use Anaconda, so unfortunately we have to do this:
+#+begin_src emacs-lisp
+  (use-package conda
+    :ensure t
+    :init
+    (setq conda-anaconda-home "/opt/anaconda3/"
+	  conda-env-autoactivate-mode t)
+    :config
+    (conda-env-activate "base"))
+#+end_src
+~lsp-mode~ crashes and burns with ~pylsp~ when we use Anaconda, so:
+#+begin_src emacs-lisp
+  (use-package lsp-pyright
+    :ensure t
+    :after lsp-mode
+    :config
+    ;; fix lsp mode
+    (setq lsp-pyright-python-executable-cmd "/opt/anaconda3/bin/python"
+	  lsp-disabled-clients '(pylsp))
+    ;; I know better than the debugger in many cases
+    (setq lsp-pyright-diagnostic-mode "openFilesOnly"
+	  lsp-pyright-disable-language-services nil
+	  lsp-pyright-disable-organize-imports nil
+	  lsp-pyright-type-checking-mode "basic")
+    (add-hook 'python-mode-hook #'(lambda () (require 'lsp-pyright) (lsp))))
+#+end_src
+This fixes syntax on save:
 #+begin_src emacs-lisp
   (use-package blacken
     :ensure t
@@ -977,18 +1151,6 @@ And this lets us edit PIP standards:
 #+begin_src emacs-lisp
   (use-package pip-requirements
     :ensure t)
-#+end_src
-Useful for when we have a simple program and want to immediately test it:
-#+begin_src emacs-lisp
-  (use-package live-py-mode
-    :ensure t
-    :hook (python-mode . (lambda () (require 'live-py-mode))))
-#+end_src
-And in the rare case we actually need to do this...
-#+begin_src emacs-lisp
-  (use-package pyenv-mode
-    :ensure t
-    :hook (python-mode . pyenv-mode))
 #+end_src
 **** Language: Go
 The mode doesn't really come with Emacs:
@@ -1028,7 +1190,16 @@ This mode brings a lot to the table, but almost never actually need all it bring
     :ensure t
     :mode "\\.nix\\'")
 #+end_src
-*** Packages: Modes
+**** Language: Java
+This one ships with Emacs! We can make it smarter by having it chat with the LSP though:
+#+begin_src emacs-lisp
+  (use-package lsp-java
+    :ensure t
+    :config
+    (setq lsp-java-server-install-dir "~/.emacs.d/eclipse.jdt.ls/server/"
+	  lsp-java-java-path "/opt/homebrew/opt/openjdk/bin/java"))
+#+end_src
+*** Packages: Misc Modes
 These are all the things that are needed for occasional, one-off editing and rarely matter all that much. They're kept around because on that blue moon where I actually need to edit one of these obscure types in Emacs, it's there.
 **** Mode: Cask
 For developing Elisp, not the one used in macOS Homebrew.
@@ -1140,6 +1311,24 @@ AppleScript is not great.
   (use-package ini-mode
     :ensure t
     :mode "\\.ini\\'")
+#+end_src
+**** Mode: AutoHotKey
+#+begin_src emacs-lisp
+  (use-package ahk-mode
+    :ensure t
+    :mode "\\.ahk\\'")
+#+end_src
+**** Mode: Dockerfile
+#+begin_src emacs-lisp
+  (use-package dockerfile-mode
+    :ensure t)
+#+end_src
+**** Mode: AppArmor Config
+#+begin_src emacs-lisp
+  (use-package apparmor-mode
+    :ensure t
+    :init
+    (require 'apparmor-mode))
 #+end_src
 **** Mode: FVWM Config
 #+begin_src emacs-lisp
