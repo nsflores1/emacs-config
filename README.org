@@ -13,12 +13,12 @@ The whole configuration lives in this file, so just scroll down!
 
 ** How to Install 💻
 Firstly, make sure the following programs are installed:
-- ~python~, any version that's not ~python2~
+- ~python3~, MUST be Python 3
 - ~ripgrep~ (optional)
 - ~git~ (used by ~magit~)
-- ~gcc~ and ~cmake~, used for ~vterm~ (optional)
+- ~gcc~ and ~cmake~, used for ~vterm~ (optional, just say ~n~ when asked on install)
 - ~fish~, used to make completion files for ~eshell~ (optional)
-- ~aspell~, used for enabling spellcheck (optional)
+- ~aspell~, used for enabling spellcheck in ~jinx~ (optional)
 - Any specific language servers/packages needed by certain modes:
   - Shell: ~checkbashisms~ (optional)
   - LaTeX: ~texlab~ (or any other language server)
@@ -31,23 +31,21 @@ Firstly, make sure the following programs are installed:
   
 Ideally in a future version of this configuration, it would prompt you to install these, but that's currently not the case. I'll fix that eventually.
 
-~git clone~ this into ~~/.emacs.d~, then start Emacs. This will take some time on initial startup, but after the first boot this process should become substantially faster. It works on *my* machine, but I make no guarantees that this will be the case on yours!
+~git clone~ this into ~~/.emacs.d~, then start Emacs. This will take a little time on initial startup, but after the first boot this process should become substantially faster. It works on *my* machine, but I make no guarantees that this will be the case on yours! 
 ** Things To Improve 🤔
-- Elpaca when that becomes less broken (or I can update Emacs)
 - Update this to use the new features in Emacs 30
 - Make sure that Emacs makes sure you have all the packages you need, and gracefully degrades on failure
 - Add ensures by default rather than typing it manually
 ** The Actual Configuration 📖
 *** Package Manager & Key Tools
-The default ~package.el~ is disabled by ~early-init.el~. But we still need to define our repos:
+The default ~package.el~ is disabled by ~early-init.el~. Good old ~package.el~ is still the way to go, because we like stability and all the other ones eat our computer for breakfast. But we still need to define our repos:
 #+begin_src emacs-lisp
     (setq package-archives
 	  '(("gnu" . "https://elpa.gnu.org/packages/")
 	    ("melpa" . "https://melpa.org/packages/")
-	    ("org" . "https://orgmode.org/elpa/")
 	    ("nongnu" . "https://elpa.nongnu.org/nongnu/")))
 
-  (package-initialize)
+(package-initialize) ;; not gonna need that
 #+end_src
 And then install ~diminish~ and ~vc-use-package~ since we'll call it a lot later:
 #+begin_src emacs-lisp
@@ -216,6 +214,11 @@ These need to go first because if something fails later I need these loaded. Abs
 *** Utility Functions
 These are things that I use that are nice to have but aren't part of GNU Emacs.
 #+begin_src emacs-lisp
+  ;; redefine the annoying GNU advertisement
+    (defun display-startup-echo-area-message ()
+      "Gets rid of that annoying GNU advertisement."
+      (message "[init.el] Init complete. Get out there!"))
+
   ;; kill the buffer and file
   (defun personal/delete-this-file-and-buffer ()
     "Delete the current file and kill its buffer."
@@ -358,7 +361,7 @@ This color-codes the syntax of code so that it's color coded by syntax level. Li
   (use-package prism
     :ensure t
     :vc (prism :url "https://github.com/alphapapa/prism.el"
-	       :branch "master"))
+		 :branch "master"))
 #+end_src
 **** ~anzu~
 Displays the amount of matches for any given search, which is quite useful.
@@ -577,7 +580,7 @@ Make hex color codes match their values.
 **** ~cowsay~
 Add a little fortune to our scratch buffers.
 #+begin_src emacs-lisp
-  ;; first, make the image
+  ;; make the image
   (use-package cowsay
     :ensure t
     :init
@@ -594,12 +597,6 @@ Add a little fortune to our scratch buffers.
   ;; now actually set our scratch buffer
   (setq inhibit-startup-message t
 	initial-scratch-message (concat (personal/prefix-comment  (cowsay-string "Emacs has finished starting." "tux")) "\n\n"))
-
-  ;; redefine the annoying GNU advertisement
-  (defun display-startup-echo-area-message ()
-    "Gets rid of that annoying GNU advertisement."
-	 (message "[init.el] Init complete. Get out there!"))
-
 #+end_src
 **** ~org-superstar-mode~
 Makes ~org-mode~ have some prettier-looking bullet points!
@@ -889,7 +886,9 @@ The existing document viewer is terrible. This is a bit better, but it does requ
   (use-package pdf-tools
     :ensure t
     :init
-    (pdf-loader-install))
+    (pdf-loader-install)
+    (add-to-list 'auto-mode-alist '("\\.pdf\\'" . pdf-view-mode)
+    (setq-default pdf-view-display-size 'fit-page)))
 #+end_src
 We should also remember our position within those documents:
 #+begin_src emacs-lisp
@@ -1044,6 +1043,12 @@ So shockingly Emacs doesn't ship with code folding outside of Org. This fixes th
     :init
     (global-treesit-fold-indicators-mode))
 #+end_src
+**** ~flycheck~: Frontend to ~lsp-mode~
+In modern Emacs, the LSP server handles all the actual work of linting, fixing, and correcting our code. We hand off the actually challenging tasks to it, but still need some nice features to go through what it says it's doing. So we add this in.
+#+begin_src emacs-lisp
+  (use-package flycheck
+    :ensure t)
+#+end_src
 **** ~lsp-mode~: Language Server Protocol Support
 We are installing as few ~flycheck~ modes as possible, this is basically our only backend. 
 #+begin_src emacs-lisp
@@ -1057,13 +1062,19 @@ We are installing as few ~flycheck~ modes as possible, this is basically our onl
 	  ;; turn off all this visual junk
 	  lsp-headerline-breadcrumb-enable nil
 	  lsp-ui-sideline-enable nil ;; TODO: maybe change this?
-	  lsp-auto-guess-root t)
+	  lsp-auto-guess-root t
+	  lsp-tex-server 'texlab)
     (defun personal/lsp-mode-setup-completion ()
       (setf (alist-get 'styles (alist-get 'lsp-capf completion-category-defaults))
 	    '(orderless)))
     (add-hook 'lsp-completion-mode-hook #'personal/lsp-mode-setup-completion)
     :hook ((python-mode . lsp)
 	   (java-mode . lsp)
+	   (LaTeX-mode . lsp)
+	   (latex-mode . lsp)
+	   (tex-mode . lsp)
+	   (bibtex-mode . lsp)
+	   (yatex-mode . lsp)
 	   (lsp-mode . lsp-enable-which-key-integration)))
 
   (use-package lsp-ui
@@ -1097,6 +1108,50 @@ AI peer programming is cool sometimes. Try to use this minimally (it makes you d
     ;; show ellama session id in header line in all buffers
     ;;(ellama-session-header-line-global-mode +1)
     )
+#+end_src
+**** Language: LaTeX
+LaTeX is very cool and Emacs is really, really good at this mode nowadays. Let's set up a nicer environment first:
+#+begin_src emacs-lisp
+  ;; the all purpose LaTeX environment
+  (use-package auctex
+    :ensure t
+    ;; the weird name diffs it from the default installed one
+    :hook ((LaTeX-mode . outline-minor-mode) ;; tab through our document like Org
+	   (LaTeX-mode . prettify-symbols-mode) ;; math looks way nicer
+	   (LaTeX-mode . LaTeX-math-mode) ;; make math nicer
+	   (LaTeX-mode . visual-line-mode)
+	   (LaTeX-mode . TeX-PDF-mode))
+    :config
+    (setq-default TeX-auto-save t
+		  TeX-parse-self t
+		  TeX-save-query nil
+		  TeX-source-correlate-method 'synctex
+		  TeX-source-correlate-start-server t
+		  TeX-view-program-selection '((output-pdf "PDF Tools"))
+		  TeX-view-program-list '(("PDF Tools" TeX-pdf-tools-sync-view)))
+    (add-hook 'TeX-after-compilation-finished-functions #'TeX-revert-document-buffer))
+
+  ;; use TAB to jump around the mode really, really fast
+  (use-package cdlatex
+    :ensure t
+    :after auctex
+    :diminish 
+    :hook (LaTeX-mode . turn-on-cdlatex))
+#+end_src
+Cool. Now let's set up automatic previews: 
+#+begin_src emacs-lisp
+  (defun personal/latex-auto-compile ()
+    (when (eq major-mode 'LaTeX-mode)
+      (TeX-save-document (TeX-master-file))
+      (TeX-command "LaTeX" 'TeX-master-file -1)))
+
+  (add-hook 'after-save-hook #'personal/latex-auto-compile)
+#+end_src
+And we also want to grab some enhancements for our LSP server:
+#+begin_src emacs-lisp
+  (use-package lsp-latex
+    :ensure t
+    :after lsp-mode)
 #+end_src
 **** Language: MATLAB
 To be honest, I think I can make this do more, such as having MATLAB as a language server. How exactly is a bit difficult. This code seems to maybe have some answers? `https://github.com/karthink/.emacs.d/blob/master/init.el#L1660`
@@ -1349,4 +1404,5 @@ AppleScript is not great.
     :init
     (add-to-list 'auto-mode-alist '("robots.txt" . robots-txt-mode)))
 #+end_src
+
 
