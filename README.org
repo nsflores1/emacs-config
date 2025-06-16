@@ -200,9 +200,10 @@ These need to go first because if something fails later I need these loaded. Abs
      '(:application tramp :protocol "ssh")
      'remote-direct-async-process)
     ;; Tips to speed up connections
-    (setq tramp-verbose 0)
+    (setq tramp-verbose 10)
     (setq tramp-chunksize 2000)
     (setq tramp-ssh-controlmaster-options nil))
+
 
   ;; fix the ls related issues on macOS & Unix
   (if (or *is-a-mac* *is-a-haiku* *is-a-unix*)
@@ -645,6 +646,12 @@ Running the ~compile~ command now does more useful things with better syntax hig
     :diminish
     :init
     (fancy-compilation-mode))
+#+end_src
+**** ~olivetti~
+This package allows you to turn on edges to your buffer, kind of like in Microsoft Word with its page limit. This way, no matter how big your frame is, your buffer still kinda looks nice. Which is a cool feature to have for editing text documents, so that text isn't strewn across the whole page.
+#+begin_src emacs-lisp
+  (use-package olivetti
+    :ensure t)
 #+end_src
 *** Packages: Overhauls
 Some parts of Emacs are fundamentally broken. These packages replace those features outright with new things. I note what's being replaced.
@@ -1125,6 +1132,7 @@ LaTeX is very cool and Emacs is really, really good at this mode nowadays. Let's
     (setq-default TeX-auto-save t
 		  TeX-parse-self t
 		  TeX-save-query nil
+		  TeX-preview-default nil
 		  TeX-source-correlate-method 'synctex
 		  TeX-source-correlate-start-server t
 		  TeX-view-program-selection '((output-pdf "PDF Tools"))
@@ -1350,6 +1358,12 @@ AppleScript is not great.
   (use-package logview
     :ensure t)
 #+end_src
+**** Mode: Jinja2
+#+begin_src emacs-lisp
+  (use-package jinja2-mode
+    :ensure t
+    :mode "\\.j2\\'")
+#+end_src
 **** Mode: phpBB
 #+begin_src emacs-lisp
   (use-package bbcode-mode
@@ -1403,6 +1417,12 @@ AppleScript is not great.
     :ensure t
     :init
     (add-to-list 'auto-mode-alist '("robots.txt" . robots-txt-mode)))
+#+end_src
+**** Mode: PowerShell
+#+begin_src emacs-lisp
+  (use-package powershell
+    :ensure t
+    :mode "\\.ps1\\'")
 #+end_src
 
 
