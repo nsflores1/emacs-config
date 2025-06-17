@@ -420,10 +420,16 @@ Allows us to execute certain targets at any buffer in a project.
     :config
     (add-hook 'makefile-mode-hook 'makefile-executor-mode))
 #+end_src
+**** ~lorem-ipsum~
+Quick filler text, if needed.
+#+begin_src emacs-lisp
+  (use-package lorem-ipsum
+    :ensure t)
+#+end_src
 *** Packages: Appearance
 This category is for packages which make Emacs' interface look nicer.
-**** Themes: ~solarized~, ~vscode-dark-plus~
-I quite like the dark VSCode and Solarized themes, so we'll use that.
+**** Themes: ~solarized~, ~vscode-dark-plus~, ~waher~
+I quite like the dark VSCode and Solarized themes, but ~waher~ is a personal favorite, so we'll use that. All are installed, so it's easy to change them.
 #+begin_src emacs-lisp
   ; ignore asking if custom themes are safe
   (setq custom-safe-themes t)
@@ -442,12 +448,18 @@ I quite like the dark VSCode and Solarized themes, so we'll use that.
   (use-package vscode-dark-plus-theme
     :ensure t
     :demand t
-    :init
-    (load-theme 'vscode-dark-plus t))
+    :init)
+    ;;(load-theme 'vscode-dark-plus t))
 
   (use-package night-owl-theme
     :ensure t
     :demand t)
+
+  (use-package waher-theme
+    :ensure t
+    :demand t
+    :init
+    (load-theme 'waher t))
 #+end_src
 **** Modeline: ~telephone-line~
 It's a bit nicer looking than the powerbars, which are too flashy for me.
@@ -995,7 +1007,15 @@ And, when we can, we can try to switch to an upgraded mode:
     :config
     (treesit-auto-add-to-auto-mode-alist 'all)
     (global-treesit-auto-mode))
-#+end_src 
+#+end_src
+**** ~disproject~: Transient ~project.el~
+Transient interfaces are great! They are amazing to use in ~magit~, this brings them into ~project~ so that I actually remember to use it.
+#+begin_src emacs-lisp
+  (use-package disproject
+    :ensure t
+    :bind (:map ctl-x-map
+	    ("p" . disproject-dispatch)))
+#+end_src
 *** Packages: Additions
 These packages add brand-new features and modes to Emacs.
 **** ~magit~: A Git Client
@@ -1020,6 +1040,18 @@ Like ~magit~ but for GitHub. Invaluable.
   (use-package forge
     :ensure t
     :after magit)
+#+end_src
+**** ~git-timemachine~: Time Travel
+Does exactly what it says. Has some weird default settings.
+#+begin_src emacs-lisp
+  (use-package git-timemachine
+    :ensure t)
+#+end_src
+**** ~smeargle~: Age At A Glance
+When activated, you can see the age of a given line (in Git-controlled buffers).
+#+begin_src emacs-lisp
+  (use-package smeargle
+    :ensure t)
 #+end_src
 **** ~diff-hl~: Changes in Fringes
 Shows what has changed between Git commits. This doesn't work without a graphical frame and it doesn't work on non-version controlled files. It's in the right fringe because nothing useful ever happens there and that's where we want all that good info anyways.
@@ -1093,8 +1125,10 @@ We are installing as few ~flycheck~ modes as possible, this is basically our onl
 	  lsp-ui-doc-show-with-cursor t
 	  lsp-ui-doc-position 'at-point))
 
+  ;; TODO: this messes up tree-sitter folding
   (use-package dap-mode
     :ensure t
+    :disabled t
     :after lsp-mode
     :config
     (dap-auto-configure-mode))  
@@ -1162,7 +1196,7 @@ And we also want to grab some enhancements for our LSP server:
     :after lsp-mode)
 #+end_src
 **** Language: MATLAB
-To be honest, I think I can make this do more, such as having MATLAB as a language server. How exactly is a bit difficult. This code seems to maybe have some answers? `https://github.com/karthink/.emacs.d/blob/master/init.el#L1660`
+To be honest, I think I can make this do more, such as having MATLAB as a language server. How exactly is a bit difficult. This code seems to maybe have some answers? https://github.com/karthink/.emacs.d/blob/master/init.el#L1660
 
 TODO: improve this
 #+begin_src emacs-lisp
@@ -1269,6 +1303,12 @@ For developing Elisp, not the one used in macOS Homebrew.
 #+begin_src emacs-lisp
   (use-package cask-mode
     :ensure t)
+#+end_src emacs-lisp
+**** Mode: Lua
+#+begin_src emacs-lisp
+  (use-package lua-mode
+    :ensure t
+    :mode "\\.lua\\'")
 #+end_src emacs-lisp
 **** Mode: CMake
 #+begin_src emacs-lisp
