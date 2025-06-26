@@ -426,10 +426,22 @@ Quick filler text, if needed.
   (use-package lorem-ipsum
     :ensure t)
 #+end_src
+**** ~insert-kaomoji~
+Incredibly useful package.
+#+begin_src emacs-lisp
+  (use-package insert-kaomoji
+    :ensure t)
+#+end_src
+**** ~decide~
+TODO: this package is terrible. Write your own...?
+#+begin_src emacs-lisp
+  (use-package decide
+    :ensure t)
+#+end_src
 *** Packages: Appearance
 This category is for packages which make Emacs' interface look nicer.
-**** Themes: ~solarized~, ~vscode-dark-plus~, ~waher~
-I quite like the dark VSCode and Solarized themes, but ~waher~ is a personal favorite, so we'll use that. All are installed, so it's easy to change them.
+**** Themes: ~solarized~, ~vscode-dark-plus~, ~waher~, ~modus~
+I quite like the dark VSCode and Solarized themes, but ~modus~ is winning me over at present. All are installed, so it's easy to change them. At present, the theme system also can intelligent switch between night and day mode. Nice!
 #+begin_src emacs-lisp
   ; ignore asking if custom themes are safe
   (setq custom-safe-themes t)
@@ -447,8 +459,8 @@ I quite like the dark VSCode and Solarized themes, but ~waher~ is a personal fav
 
   (use-package vscode-dark-plus-theme
     :ensure t
-    :demand t
-    :init)
+    :demand t)
+    ;;:init
     ;;(load-theme 'vscode-dark-plus t))
 
   (use-package night-owl-theme
@@ -458,11 +470,32 @@ I quite like the dark VSCode and Solarized themes, but ~waher~ is a personal fav
   (use-package waher-theme
     :ensure t
     :demand t
-    :init
-    (load-theme 'waher t))
+    :init)
+  ;;(load-theme 'waher t))
+
+  (use-package modus-themes
+    :ensure t
+    :demand t)
+#+end_src
+And then, of course, ~auto-dark-mode~:
+#+begin_src emacs-lisp
+  (use-package auto-dark
+    :ensure t
+    :custom
+    (auto-dark-themes '((modus-vivendi-tritanopia) (modus-operandi-tinted)))
+    (auto-dark-polling-interval-seconds 5)
+    (auto-dark-allow-osascript t)
+    :hook
+    (auto-dark-dark-mode
+     . (lambda ()
+	 (message "[auto-dark] Dark mode theme automatically applied")))
+    (auto-dark-light-mode
+     . (lambda ()
+	 (message "[auto-dark] Light mode theme automatically applied")))
+    :init (auto-dark-mode))
 #+end_src
 **** Modeline: ~telephone-line~
-It's a bit nicer looking than the powerbars, which are too flashy for me.
+It's a bit nicer looking than the powerbars, which are too flashy for me. 
 #+begin_src emacs-lisp
   (use-package telephone-line
     :ensure t
@@ -664,6 +697,15 @@ This package allows you to turn on edges to your buffer, kind of like in Microso
 #+begin_src emacs-lisp
   (use-package olivetti
     :ensure t)
+#+end_src
+**** ~pretty-sha-path~
+Tidy up GUIX/Nix directories when you see them in Emacs.
+#+begin_src emacs-lisp
+  (use-package pretty-sha-path
+    :ensure t
+    :diminish
+    :init
+    (global-pretty-sha-path-mode))
 #+end_src
 *** Packages: Overhauls
 Some parts of Emacs are fundamentally broken. These packages replace those features outright with new things. I note what's being replaced.
@@ -1041,6 +1083,12 @@ Like ~magit~ but for GitHub. Invaluable.
     :ensure t
     :after magit)
 #+end_src
+**** ~docker~: Docker Client
+Docker is a terrible piece of software that should never be used. But yet.
+#+begin_src emacs-lisp
+  (use-package docker
+    :ensure t)
+#+end_src
 **** ~git-timemachine~: Time Travel
 Does exactly what it says. Has some weird default settings.
 #+begin_src emacs-lisp
@@ -1383,6 +1431,7 @@ AppleScript is not great.
     :mode "\\.json\\'")
 #+end_src
 **** Mode: YAML Files & Ansible
+So we can do this to get the basic modes:
 #+begin_src emacs-lisp
   (use-package yaml-mode
     :ensure t
@@ -1392,6 +1441,11 @@ AppleScript is not great.
     :ensure t
     :init
     (add-hook 'yaml-mode-hook '(lambda () (ansible-mode 1))))
+#+end_src
+But there's a polymode so we can write Jinja2 inside of Ansible:
+#+begin_src emacs-lisp
+  (use-package poly-ansible
+    :ensure t)
 #+end_src
 **** Mode: Unix Log
 #+begin_src emacs-lisp
@@ -1450,6 +1504,11 @@ AppleScript is not great.
   (use-package tmux-mode
     :ensure t
     :mode "\\.tmux.conf\\'")
+#+end_src
+**** Mode: MediaWiki
+#+begin_src emacs-lisp
+  (use-package mediawiki
+    :ensure t)
 #+end_src
 **** Mode: robots.txt
 #+begin_src emacs-lisp
