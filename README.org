@@ -213,7 +213,7 @@ These need to go first because if something fails later I need these loaded. Abs
 	(require 'ls-lisp)))
 #+end_src
 *** Utility Functions
-These are things that I use that are nice to have but aren't part of GNU Emacs.
+These are things that I use that are nice to have but aren't part of GNU Emacs. Although many of them are basically replaced by ~crux~ at this point, it's nice to keep around a vanilla implementation in case packages can't be installed.
 #+begin_src emacs-lisp
   ;; redefine the annoying GNU advertisement
     (defun display-startup-echo-area-message ()
@@ -275,6 +275,18 @@ These are things that I use that are nice to have but aren't part of GNU Emacs.
 	(goto-char (point-max))
 	(insert ";;; " fname " ends here\n"))))
 
+  ;; kill all buffers instantly
+  ;; genuinely WHY is this not already built-in
+  (defun personal/close-all-buffers ()
+    "Kill all buffers without regard for their origin."
+    (interactive)
+    (mapc 'kill-buffer (buffer-list)))
+  (global-set-key (kbd "C-M-s-k") 'close-all-buffers)
+
+  ;; quickly visit our configuration
+  (defun personal/config-visit ()
+    (interactive)
+    (find-file "~/.emacs.d/config.org"))
 #+end_src
 *** Packages: Utility
 This category is for packages which extend Emacs without adding brand new features. Basically just overhauls of existing features.
@@ -384,6 +396,15 @@ Extremely useful when you've got a lot of these on the screen.
     :bind
     ("C-x o". switch-window))
 #+end_src
+**** ~other-frame-window~
+Emacs has an /okay/ window manager, but it's preferable to use the real OS one. So to fix this, we can use this package, so that we can spawn buffers in other windows. The one caveat is that if you make too many windows, it can become dangerous, as you could accidentally delete your primary Emacs window. Use with care.
+#+begin_src emacs-lisp
+  (use-package other-frame-window
+    :ensure t
+    :diminish
+    :init
+    (other-frame-window-mode))
+#+end_src
 **** ~osx-clipboard-mode~
 Allows the use of the macOS clipboard, even if we're not on the terminal
 #+begin_src emacs-lisp
@@ -426,12 +447,24 @@ Quick filler text, if needed.
   (use-package lorem-ipsum
     :ensure t)
 #+end_src
+**** ~crux~
+A bunch of extremely useful functions indeed! It adds all the things that the Emacs devs seemingly forgot to put into the final version.
+#+begin_src emacs-lisp
+  (use-package crux
+    :ensure t)
+#+end_src
 **** ~insert-kaomoji~
 Incredibly useful package.
 #+begin_src emacs-lisp
   (use-package insert-kaomoji
     :ensure t)
 #+end_src
+**** ~insert-random~
+Maybe useful under a particularly strange set of circumstances?
+#+begin_src emacs-lisp
+  (use-package insert-random
+    :ensure t)
+#+end_src 
 **** ~decide~
 TODO: this package is terrible. Write your own...?
 #+begin_src emacs-lisp
@@ -482,7 +515,7 @@ And then, of course, ~auto-dark-mode~:
   (use-package auto-dark
     :ensure t
     :custom
-    (auto-dark-themes '((modus-vivendi-tritanopia) (modus-operandi-tinted)))
+    (auto-dark-themes '((modus-vivendi-tritanopia) (modus-operandi)))
     (auto-dark-polling-interval-seconds 5)
     (auto-dark-allow-osascript t)
     :hook
@@ -495,7 +528,7 @@ And then, of course, ~auto-dark-mode~:
     :init (auto-dark-mode))
 #+end_src
 **** Modeline: ~telephone-line~
-It's a bit nicer looking than the powerbars, which are too flashy for me. 
+It's a bit nicer looking than the powerbars, which are too flashy for me.
 #+begin_src emacs-lisp
   (use-package telephone-line
     :ensure t
@@ -563,6 +596,13 @@ This package appears to be bugged. I'll have it be turned off for now
     :diminish
     :config
     (beacon-mode 1))
+#+end_src
+**** ~huecycle~
+Makes certain parts of the screen change color when idle. A nicer alternative to ~zone~.
+#+begin_src emacs-lisp
+  ;; TODO: doesn't actually work, package is bugged
+  (use-package huecycle
+    :ensure t)
 #+end_src
 **** ~goggles~
 #+begin_src emacs-lisp
@@ -721,11 +761,22 @@ Fine on every OS but is a bit slower than ~vterm~.
     (add-hook 'eshell-load-hook #'eat-eshell-visual-command-mode))
 #+end_src
 **** ~vterm~: Another Replacement of ~ansi-term~
-Faster but requires the compiled module so this can fail quite dramatically.
+Faster but requires the compiled module so this can fail quite dramatically. It doesn't match theme colors, because the colors you want for editing code vs running commands should be different.
 #+begin_src emacs-lisp
   (use-package vterm
     :ensure t
-    :if (not *is-a-windows*))
+    :if (not *is-a-windows*)
+    :init
+    ;; use classic terminal colors
+    ;; also, this gives us a dark mode terminal all the time
+    (setq vterm-color-black   "#000000"
+	vterm-color-white   "#ffffff"
+	vterm-color-red     "#ff5c57"
+	vterm-color-green   "#5af78e"
+	vterm-color-yellow  "#f3f99d"
+	vterm-color-blue    "#57c7ff"
+	vterm-color-magenta "#ff6ac1"
+	vterm-color-cyan    "#9aedfe"))
 #+end_src
 **** ~multi-term~ & ~multi-vterm~: Summon Many Terminals
 We often need more than one terminal when we're doing things. Let's add that:
@@ -800,7 +851,7 @@ Lastly, syntax highlighting:
     (eshell-syntax-highlighting-global-mode +1))
 #+end_src
 **** ~consult~: Command Enhancements
-These commands completely replace their stock components with upgrades.
+These commands completely replace their stock components with upgrades. ~M-y~ to open the kill ring is amazing, genuinely. Makes it about 100x more usable.
 #+begin_src emacs-lisp
   (use-package consult
     :ensure t
@@ -1079,9 +1130,18 @@ We'll also grab a few bonus features as well:
 **** ~forge~: A Git Forge Client
 Like ~magit~ but for GitHub. Invaluable.
 #+begin_src emacs-lisp
+  ;; needed for github secret
+  (setq auth-sources '("~/.authinfo"))
+
   (use-package forge
     :ensure t
     :after magit)
+#+end_src
+**** ~igist~: GitHub Gist Client
+It's useful for quickly sharing code with someone, and has a nice transient interface. This is probably the best solution for collaborating on a document, which Emacs still can't really do yet.
+#+begin_src emacs-lisp
+  (use-package igist
+    :ensure t)
 #+end_src
 **** ~docker~: Docker Client
 Docker is a terrible piece of software that should never be used. But yet.
@@ -1309,9 +1369,14 @@ The mode doesn't really come with Emacs:
     (setenv "GOPATH" (concat (getenv "HOME") "/.go")))
 #+end_src
 **** Language: Markdown
-The mode doesn't really come with Emacs:
+No mode for it by default:
 #+begin_src emacs-lisp
   (use-package markdown-mode
+    :ensure t)
+#+end_src
+Also, with some cool magic we can use ~eww~ to preview what it'll look like if we're writing a GitHub ~README.md~, using this package:
+#+begin_src emacs-lisp
+  (use-package gh-md
     :ensure t)
 #+end_src
 **** Language: Rust
