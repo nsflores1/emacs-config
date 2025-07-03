@@ -385,6 +385,13 @@ Displays the amount of matches for any given search, which is quite useful.
     :init
     (global-anzu-mode +1))
 #+end_src
+**** ~scratch~
+It's often useful to pop open a scratch buffer for a given mode without making a file. So useful that we need a hotkey for it.
+#+begin_src emacs-lisp
+  (use-package scratch
+    :ensure t
+    :bind ("C-c s" . scratch))
+#+end_src
 **** ~switch-window~
 Extremely useful when you've got a lot of these on the screen.
 #+begin_src emacs-lisp
@@ -464,7 +471,14 @@ Maybe useful under a particularly strange set of circumstances?
 #+begin_src emacs-lisp
   (use-package insert-random
     :ensure t)
-#+end_src 
+#+end_src
+**** ~evil-nerd-commenter~
+Despite the name, it's not really required to use ~evil~ for it. What it actually does is quickly uncomments or comments out a line. It's a bit smarter than the default one because it works on multiple lines if you combine it with ~C-u~.
+#+begin_src emacs-lisp
+  (use-package evil-nerd-commenter
+    :ensure t
+    :bind ("M-;" . evilnc-comment-or-uncomment-lines))
+#+end_src
 **** ~decide~
 TODO: this package is terrible. Write your own...?
 #+begin_src emacs-lisp
@@ -602,7 +616,15 @@ Makes certain parts of the screen change color when idle. A nicer alternative to
 #+begin_src emacs-lisp
   ;; TODO: doesn't actually work, package is bugged
   (use-package huecycle
-    :ensure t)
+    :ensure t
+    :config
+    (huecycle-set-faces
+     ((background . (hl-line))
+      :random-color-hue-range (0.0 1.0)
+      :random-color-saturation-range (0.8 1.0)
+      :random-color-luminance-range (0.8 0.9))
+      :speed 3.0)
+    (huecycle-when-idle 5))
 #+end_src
 **** ~goggles~
 #+begin_src emacs-lisp
@@ -1142,6 +1164,16 @@ It's useful for quickly sharing code with someone, and has a nice transient inte
 #+begin_src emacs-lisp
   (use-package igist
     :ensure t)
+#+end_src
+**** ~multiple-cursors~: Edit (At Scale)
+This is a crazy package. You can basically select everything you want in one fell swoop, and it makes it extremely easy to do mass editing. Way, way better than the VSCode implementation of this feature (you don't even need to select the same feature, Emacs does it for you). 
+#+begin_src emacs-lisp
+  (use-package multiple-cursors
+    :ensure t
+    :bind (("C-S-c C-S-c" . mc/edit-lines)
+	   ("C->" . mc/mark-next-like-this)
+	   ("C-<" . mc/mark-previous-like-this)
+	   ("C-c C-<" . mc/mark-all-like-this)))
 #+end_src
 **** ~docker~: Docker Client
 Docker is a terrible piece of software that should never be used. But yet.
