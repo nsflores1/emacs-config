@@ -480,6 +480,15 @@ Despite the name, it's not really required to use ~evil~ for it. What it actuall
     :ensure t
     :bind ("M-;" . evilnc-comment-or-uncomment-lines))
 #+end_src
+**** ~visual-replace~
+Shows the replacements that we're going to do. It shows what the buffer will look like after the replacement.
+#+begin_src emacs-lisp
+  (use-package visual-replace
+    :ensure t
+    :diminish
+    :init
+    (visual-replace-gobal-mode 1))
+#+end_src
 **** ~decide~
 TODO: this package is terrible. Write your own...?
 #+begin_src emacs-lisp
