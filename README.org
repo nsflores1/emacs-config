@@ -487,7 +487,7 @@ Shows the replacements that we're going to do. It shows what the buffer will loo
     :ensure t
     :diminish
     :init
-    (visual-replace-gobal-mode 1))
+    (visual-replace-global-mode 1))
 #+end_src
 **** ~decide~
 TODO: this package is terrible. Write your own...?
