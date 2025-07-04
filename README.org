@@ -36,16 +36,17 @@ Ideally in a future version of this configuration, it would prompt you to instal
 - Update this to use the new features in Emacs 30
 - Make sure that Emacs makes sure you have all the packages you need, and gracefully degrades on failure
 - Add ensures by default rather than typing it manually
+- Add ~puni~ rather than ~paredit~
 ** The Actual Configuration 📖
 *** Package Manager & Key Tools
 The default ~package.el~ is disabled by ~early-init.el~. Good old ~package.el~ is still the way to go, because we like stability and all the other ones eat our computer for breakfast. But we still need to define our repos:
 #+begin_src emacs-lisp
-    (setq package-archives
-	  '(("gnu" . "https://elpa.gnu.org/packages/")
-	    ("melpa" . "https://melpa.org/packages/")
-	    ("nongnu" . "https://elpa.nongnu.org/nongnu/")))
+      (setq package-archives
+	    '(("gnu" . "https://elpa.gnu.org/packages/")
+	      ("melpa" . "https://melpa.org/packages/")
+	      ("nongnu" . "https://elpa.nongnu.org/nongnu/")))
 
-(package-initialize) ;; not gonna need that
+  (package-initialize) ;; not gonna need that
 #+end_src
 And then install ~diminish~ and ~vc-use-package~ since we'll call it a lot later:
 #+begin_src emacs-lisp
@@ -1175,16 +1176,29 @@ This is a crazy package. You can basically select everything you want in one fel
 	   ("C-<" . mc/mark-previous-like-this)
 	   ("C-c C-<" . mc/mark-all-like-this)))
 #+end_src
+**** ~expand-region~: Semantic Selection
+This is a lot faster than using the standard text commands. This one selects by semantic regions, so it's quite a lot faster.
+#+begin_src emacs-lisp
+  (use-package expand-region
+    :ensure t
+    :bind ("C-=" . er/expand-region))
+#+end_src
 **** ~docker~: Docker Client
 Docker is a terrible piece of software that should never be used. But yet.
 #+begin_src emacs-lisp
   (use-package docker
     :ensure t)
 #+end_src
-**** ~git-timemachine~: Time Travel
+**** ~git-timemachine~: Git Time Travel
 Does exactly what it says. Has some weird default settings.
 #+begin_src emacs-lisp
   (use-package git-timemachine
+    :ensure t)
+#+end_src
+**** ~git-link~: View Online Git
+This is nice because it plays well with ~git-timemachine~, so it really does work on any given buffer for Git. 
+#+begin_src emacs-lisp
+  (use-package git-link
     :ensure t)
 #+end_src
 **** ~smeargle~: Age At A Glance
