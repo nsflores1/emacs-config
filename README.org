@@ -290,7 +290,7 @@ These are things that I use that are nice to have but aren't part of GNU Emacs. 
     (find-file "~/.emacs.d/config.org"))
 #+end_src
 *** Packages: Utility
-This category is for packages which extend Emacs without adding brand new features. Basically just overhauls of existing features.
+This category is for packages which extend Emacs without adding brand new features. Basically just tweaks or minor extensions of existing features.
 **** ~osx-trash~
 Really nice fix for the fact that stock Emacs can't do this.
 #+begin_src emacs-lisp
@@ -545,9 +545,13 @@ And then, of course, ~auto-dark-mode~:
     :hook
     (auto-dark-dark-mode
      . (lambda ()
+	 (set-face-background 'why-this-annotate-heat-map-cold "#203448")
+	 (set-face-background 'why-this-annotate-heat-map-warm "#382f27")
 	 (message "[auto-dark] Dark mode theme automatically applied")))
     (auto-dark-light-mode
      . (lambda ()
+	 (set-face-background 'why-this-annotate-heat-map-cold "#dde3f4")
+	 (set-face-background 'why-this-annotate-heat-map-warm "#f0e0d4")
 	 (message "[auto-dark] Light mode theme automatically applied")))
     :init (auto-dark-mode))
 #+end_src
@@ -593,6 +597,7 @@ This is the best package at least on macOS, and probably the best on Linux too.
 #+begin_src emacs-lisp
   (use-package smooth-scrolling
     :ensure t
+    :if window-system
     :diminish
     :hook (after-init . (lambda ()
 			  (smooth-scrolling-mode 1))))
@@ -622,19 +627,20 @@ This package appears to be bugged. I'll have it be turned off for now
     (beacon-mode 1))
 #+end_src
 **** ~huecycle~
-Makes certain parts of the screen change color when idle. A nicer alternative to ~zone~.
+Makes certain parts of the screen change color when idle. A nicer alternative to ~zone~. May want to disable; raises CPU while idle.
 #+begin_src emacs-lisp
   ;; TODO: doesn't actually work, package is bugged
   (use-package huecycle
     :ensure t
+    :if window-system
     :config
     (huecycle-set-faces
-     ((background . (hl-line))
+     ((background . (hl-line mode-line))
       :random-color-hue-range (0.0 1.0)
       :random-color-saturation-range (0.8 1.0)
       :random-color-luminance-range (0.8 0.9))
       :speed 3.0)
-    (huecycle-when-idle 5))
+    (huecycle-when-idle 10))
 #+end_src
 **** ~goggles~
 #+begin_src emacs-lisp
@@ -1141,8 +1147,20 @@ Transient interfaces are great! They are amazing to use in ~magit~, this brings 
     :bind (:map ctl-x-map
 	    ("p" . disproject-dispatch)))
 #+end_src
+**** ~macrostep~: Expand Emacs Lisp Macros
+An incredibly useful feature for debugging Elisp, this lets you step through a macro as it's being evaluated. This can help a lot with nested macros, as otherwise the sequence of operations can be quite confusing.
+#+begin_src emacs-lisp
+  (use-package macrostep
+    :ensure t)
+#+end_src
 *** Packages: Additions
 These packages add brand-new features and modes to Emacs.
+**** ~smog~: Reading Quality
+Emacs doesn't have a feature like Microsoft Word to check for ease of reading... until now. Highly usable for a variety of writing tasks, it gives a good score about how readable a buffer is. Just call it to get a bunch of info on writing sins.
+#+begin_src emacs-lisp
+  (use-package smog
+    :ensure t)
+#+end_src
 **** ~magit~: A Git Client
 A complete Git client is a pretty amazing thing.
 #+begin_src emacs-lisp
@@ -1209,6 +1227,13 @@ This is nice because it plays well with ~git-timemachine~, so it really does wor
 #+begin_src emacs-lisp
   (use-package git-link
     :ensure t)
+#+end_src
+**** ~why-this~: Git Blame Client
+This package adds a few functions which annotate the buffer with Git blames, so you can see exactly who edited what. Useful for figuring out when a change was applied. Disabled by default due to it being annoying in the buffer.
+#+begin_src emacs-lisp
+  (use-package why-this
+    :ensure t
+    :diminish)
 #+end_src
 **** ~smeargle~: Age At A Glance
 When activated, you can see the age of a given line (in Git-controlled buffers).
@@ -1464,6 +1489,21 @@ This one ships with Emacs! We can make it smarter by having it chat with the LSP
     (setq lsp-java-server-install-dir "~/.emacs.d/eclipse.jdt.ls/server/"
 	  lsp-java-java-path "/opt/homebrew/opt/openjdk/bin/java"))
 #+end_src
+**** Language: Common Lisp
+It's a shockingly nice language that I don't get to use often enough. In the event that I do write some more, it's nice to have the best IDE for it:
+#+begin_src emacs-lisp
+  (use-package sly
+    :ensure t)
+
+  (use-package sly-macrostep
+    :ensure t)
+
+  (use-package sly-repl-ansi-color
+    :ensure t
+    :after sly
+    :init
+    (push 'sly-repl-ansi-color sly-contribs))
+#+end_src
 *** Packages: Misc Modes
 These are all the things that are needed for occasional, one-off editing and rarely matter all that much. They're kept around because on that blue moon where I actually need to edit one of these obscure types in Emacs, it's there.
 **** Mode: Cask
@@ -1481,6 +1521,11 @@ For developing Elisp, not the one used in macOS Homebrew.
 **** Mode: CMake
 #+begin_src emacs-lisp
   (use-package cmake-mode
+    :ensure t)
+#+end_src
+**** Mode: Yarn
+#+begin_src emacs-lisp
+  (use-package yarn-mode
     :ensure t)
 #+end_src
 **** Mode: Apache Config
