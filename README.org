@@ -201,7 +201,8 @@ These need to go first because if something fails later I need these loaded. Abs
      '(:application tramp :protocol "ssh")
      'remote-direct-async-process)
     ;; Tips to speed up connections
-    (setq tramp-verbose 10)
+    ;; change tramp-verbose if you're having issues
+    (setq tramp-verbose 3)
     (setq tramp-chunksize 2000)
     (setq tramp-ssh-controlmaster-options nil))
 
@@ -498,7 +499,7 @@ TODO: this package is terrible. Write your own...?
 *** Packages: Appearance
 This category is for packages which make Emacs' interface look nicer.
 **** Themes: ~solarized~, ~vscode-dark-plus~, ~waher~, ~modus~
-I quite like the dark VSCode and Solarized themes, but ~modus~ is winning me over at present. All are installed, so it's easy to change them. At present, the theme system also can intelligent switch between night and day mode. Nice!
+I quite like the dark VSCode and Solarized themes, but ~modus~ is nice sometimes too. All are installed, so it's easy to change them. At present, the theme system also can intelligent switch between night and day mode. Nice!
 #+begin_src emacs-lisp
   ; ignore asking if custom themes are safe
   (setq custom-safe-themes t)
@@ -513,12 +514,11 @@ I quite like the dark VSCode and Solarized themes, but ~modus~ is winning me ove
 	  solarized-emphasize-indicators t
 	  x-underline-at-descent-line t))
     ;(load-theme 'solarized-selenized-black t)
-
+ 
   (use-package vscode-dark-plus-theme
     :ensure t
-    :demand t)
-    ;;:init
-    ;;(load-theme 'vscode-dark-plus t))
+    :init
+    (load-theme 'vscode-dark-plus t))
 
   (use-package night-owl-theme
     :ensure t
@@ -536,8 +536,9 @@ I quite like the dark VSCode and Solarized themes, but ~modus~ is winning me ove
 #+end_src
 And then, of course, ~auto-dark-mode~:
 #+begin_src emacs-lisp
+  ;; this actually does nothing at the moment but it's nice to have
   (use-package auto-dark
-    :ensure t
+    :disabled t
     :custom
     (auto-dark-themes '((modus-vivendi-tritanopia) (modus-operandi)))
     (auto-dark-polling-interval-seconds 5)
@@ -592,6 +593,32 @@ Makes the buffers that aren't part of real files a different color than those th
     :config
     (solaire-global-mode +1))
 #+end_src
+**** ~ligatures~
+They look /so good/ with the right font. This config assumes you use JetBrains Mono, as this section won't work with any other font.
+#+begin_src emacs-lisp
+  ;; obviously, this must be set first
+  (set-frame-font "JetBrains Mono 12" nil t)
+
+  (use-package ligature
+    :ensure t
+    :diminish
+    :config
+    ;; the JetBrains specific part
+    (ligature-set-ligatures 'prog-mode '("--" "---" "==" "===" "!=" "!==" "=!="
+				"=:=" "=/=" "<=" ">=" "&&" "&&&" "&=" "++" "+++" "***" ";;" "!!"
+				"??" "???" "?:" "?." "?=" "<:" ":<" ":>" ">:" "<:<" "<>" "<<<" ">>>"
+				"<<" ">>" "||" "-|" "_|_" "|-" "||-" "|=" "||=" "##" "###" "####"
+				"#{" "#[" "]#" "#(" "#?" "#_" "#_(" "#:" "#!" "#=" "^=" "<$>" "<$"
+				"$>" "<+>" "<+" "+>" "<*>" "<*" "*>" "</" "</>" "/>" "<!--" "<#--"
+				"-->" "->" "->>" "<<-" "<-" "<=<" "=<<" "<<=" "<==" "<=>" "<==>"
+				"==>" "=>" "=>>" ">=>" ">>=" ">>-" ">-" "-<" "-<<" ">->" "<-<" "<-|"
+				"<=|" "|=>" "|->" "<->" "<~~" "<~" "<~>" "~~" "~~>" "~>" "~-" "-~"
+				"~@" "[||]" "|]" "[|" "|}" "{|" "[<" ">]" "|>" "<|" "||>" "<||"
+				"|||>" "<|||" "<|>" "..." ".." ".=" "..<" ".?" "::" ":::" ":=" "::="
+				":?" ":?>" "//" "///" "/*" "*/" "/=" "//=" "/==" "@_" "__" "???"
+				"<:<" ";;;"))
+    (global-ligature-mode t))
+#+end_src
 **** ~smooth-scrolling~
 This is the best package at least on macOS, and probably the best on Linux too.
 #+begin_src emacs-lisp
@@ -603,16 +630,15 @@ This is the best package at least on macOS, and probably the best on Linux too.
 			  (smooth-scrolling-mode 1))))
 #+end_src
 **** ~dimmer~
-This package appears to be bugged. I'll have it be turned off for now
+This package is finally fixed! Nice, smooth dimming of inactive buffers, that now works relatively well regardless of themes. Nice!
 #+begin_src emacs-lisp
   (use-package dimmer
-    :disabled t
+    :ensure t
     :if window-system
     :diminish
     :config
-    (setq dimmer-adjustment-mode :background
-	  dimmer-fraction 0.1
-	  dimmer-use-colorspace :rgb)
+    (setq dimmer-adjustment-mode :foreground
+	  dimmer-fraction 0.3)
     (require 'dimmer)
     (dimmer-configure-which-key)
     (dimmer-configure-helm)
@@ -627,20 +653,31 @@ This package appears to be bugged. I'll have it be turned off for now
     (beacon-mode 1))
 #+end_src
 **** ~huecycle~
-Makes certain parts of the screen change color when idle. A nicer alternative to ~zone~. May want to disable; raises CPU while idle.
+Makes certain parts of the screen change color when idle. A nicer alternative to ~zone~. May want to disable; raises CPU while idle. This simplifies life a lot.
 #+begin_src emacs-lisp
   ;; TODO: doesn't actually work, package is bugged
-  (use-package huecycle
+  ;; (use-package huecycle
+  ;;   :disabled t
+  ;;   :if window-system
+  ;;   :config
+  ;;   (huecycle-set-faces
+  ;;    ((background . (hl-line mode-line))
+  ;;     :random-color-hue-range (0.0 1.0)
+  ;;     :random-color-saturation-range (0.8 1.0)
+  ;;     :random-color-luminance-range (0.8 0.9))
+  ;;     :speed 3.0)
+  ;;   (huecycle-when-idle 10))
+#+end_src
+**** ~pulsing-cursor~
+Blink and fade the cursor for a RGB-lighting like effect.
+#+begin_src emacs-lisp
+  (use-package pulsing-cursor
     :ensure t
-    :if window-system
+    :diminish
+    :vc (pulsing-cursor :url "https://github.com/abrichr/pulsing-cursor" :branch "main")
     :config
-    (huecycle-set-faces
-     ((background . (hl-line mode-line))
-      :random-color-hue-range (0.0 1.0)
-      :random-color-saturation-range (0.8 1.0)
-      :random-color-luminance-range (0.8 0.9))
-      :speed 3.0)
-    (huecycle-when-idle 10))
+    (pulsing-cursor-mode +1))
+  
 #+end_src
 **** ~goggles~
 #+begin_src emacs-lisp
