@@ -593,6 +593,15 @@ Makes the buffers that aren't part of real files a different color than those th
     :config
     (solaire-global-mode +1))
 #+end_src
+**** ~modern-fringes~
+This replaces the default bitmaps with some more readable ones.
+#+begin_src emacs-lisp
+  (use-package modern-fringes
+    :ensure t
+    :diminish
+    :init
+    (modern-fringes-mode))
+#+end_src
 **** ~ligatures~
 They look /so good/ with the right font. This config assumes you use JetBrains Mono, as this section won't work with any other font.
 #+begin_src emacs-lisp
@@ -905,6 +914,14 @@ And we probably want some better suggestion feedback:
     :after eshell
     :diminish eshell-autosuggest-mode
     :hook (eshell-mode . esh-autosuggest-mode))
+#+end_src
+It might also be nice to have a bootup screen like every other shell:
+#+begin_src emacs-lisp
+  ;; TODO: doesn't work well on macOS.
+  ;; you should fork and fix it
+  (use-package eshell-info-banner
+    :ensure t
+    :hook (eshell-banner-load . eshell-info-banner-update-banner))
 #+end_src
 We can also use ~fish~ scripts in ~eshell~, if it's installed:
 #+begin_src emacs-lisp
@@ -1229,6 +1246,15 @@ It's useful for quickly sharing code with someone, and has a nice transient inte
 #+begin_src emacs-lisp
   (use-package igist
     :ensure t)
+#+end_src
+**** ~atomic-chrome~: Emacs in Browser
+So Emacs is great, but its built in web browser (~xwidget-webkit~) is not the best. What's the fix? Simple. Use GhostText and this package to chain the gap, so that we can pop open Emacs on any buffer on the web! It's especially good in cases where you want to use syntax highlighting for something. But it only works on desktop operating systems. For Safari mostly. If you want better for Chrome and Firefox, use ~chrome-emacs~.
+#+begin_src emacs-lisp
+  (use-package atomic-chrome
+    :if (and (or *is-a-mac* *is-a-linux*) window-system) 
+    :ensure t
+    :init
+    (atomic-chrome-start-server))
 #+end_src
 **** ~multiple-cursors~: Edit (At Scale)
 This is a crazy package. You can basically select everything you want in one fell swoop, and it makes it extremely easy to do mass editing. Way, way better than the VSCode implementation of this feature (you don't even need to select the same feature, Emacs does it for you). 
