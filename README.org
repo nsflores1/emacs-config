@@ -64,11 +64,6 @@ We didn't have the frame loaded and rendered in until this point, so we couldn't
   (scroll-bar-mode -1)
   (pixel-scroll-mode)
 
-  ;; it's easier to see it when it contrasts with everything else so hard.
-  ;; especially true in the terminal. we set it in early-init.el,
-  ;; but some themes are weird and unset it, so this changes it back.
-  (set-cursor-color "#d00000")
-
   (setq use-file-dialog nil
 	use-dialog-box nil
 	inhibit-startup-screen t)
@@ -562,6 +557,18 @@ And then, of course, ~auto-dark-mode~:
 	 (set-face-background 'why-this-annotate-heat-map-warm "#f0e0d4")
 	 (message "[auto-dark] Light mode theme automatically applied")))
     :init (auto-dark-mode))
+#+end_src
+Of course, we have to change the cursor color now, since loading and applying some themes resets it:
+#+begin_src emacs-lisp
+  ;; it's easier to see it when it contrasts with everything else so hard.
+  ;; especially true in the terminal. we set it in early-init.el,
+  ;; but some themes are weird and unset it, so this changes it back.
+  (set-cursor-color "#d00000")
+  ;; this is a controversial choice, but it makes it easier to see
+  ;; which side of a character you're sitting on. and in modern Emacs,
+  ;; it's extremely easy to figure out where your cursor is thanks to the visual
+  ;; aids anyways, so...
+  (setq-default cursor-type 'bar)
 #+end_src
 **** Modeline: ~telephone-line~
 It's a bit nicer looking than the powerbars, which are too flashy for me.
