@@ -492,6 +492,15 @@ Shows the replacements that we're going to do. It shows what the buffer will loo
     :init
     (visual-replace-global-mode 1))
 #+end_src
+**** ~screenshot~
+Quickly take a screenshot of a certain region! Very nice indeed.
+TODO: this function is broken on macOS, only works on Linux
+#+begin_src emacs-lisp
+    (use-package screenshot
+      :ensure t
+      :vc (screenshot :url "https://github.com/tecosaur/screenshot"
+		   :branch "master"))
+#+end_src
 **** ~decide~
 TODO: this package is terrible. Write your own...?
 #+begin_src emacs-lisp
@@ -557,18 +566,6 @@ And then, of course, ~auto-dark-mode~:
 	 (set-face-background 'why-this-annotate-heat-map-warm "#f0e0d4")
 	 (message "[auto-dark] Light mode theme automatically applied")))
     :init (auto-dark-mode))
-#+end_src
-Of course, we have to change the cursor color now, since loading and applying some themes resets it:
-#+begin_src emacs-lisp
-  ;; it's easier to see it when it contrasts with everything else so hard.
-  ;; especially true in the terminal. we set it in early-init.el,
-  ;; but some themes are weird and unset it, so this changes it back.
-  (set-cursor-color "#d00000")
-  ;; this is a controversial choice, but it makes it easier to see
-  ;; which side of a character you're sitting on. and in modern Emacs,
-  ;; it's extremely easy to figure out where your cursor is thanks to the visual
-  ;; aids anyways, so...
-  (setq-default cursor-type 'bar)
 #+end_src
 **** Modeline: ~telephone-line~
 It's a bit nicer looking than the powerbars, which are too flashy for me.

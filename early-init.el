@@ -66,8 +66,7 @@
 ;; make the cursor easier to see,
 ;; make the thing nice and transparent.
 (setq default-frame-alist '((vertical-scroll-bars . nil)
-                            (horizontal-scroll-bars . nil)
-			    (cursor-color . "#d00000")))
+                            (horizontal-scroll-bars . ))
 
 (message "[init.el] graphical frames edited, if they exist")
 ;; early-init.el ends here
