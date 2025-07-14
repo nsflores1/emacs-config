@@ -63,8 +63,11 @@
 				      (abbreviate-file-name (buffer-file-name))
 				    "%b"))))
 
+;; make the cursor easier to see,
+;; make the thing nice and transparent.
 (setq default-frame-alist '((vertical-scroll-bars . nil)
-                            (horizontal-scroll-bars . nil)))
+                            (horizontal-scroll-bars . nil)
+			    (cursor-color . "#d00000")))
 
 (message "[init.el] graphical frames edited, if they exist")
 ;; early-init.el ends here

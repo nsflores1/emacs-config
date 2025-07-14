@@ -64,6 +64,11 @@ We didn't have the frame loaded and rendered in until this point, so we couldn't
   (scroll-bar-mode -1)
   (pixel-scroll-mode)
 
+  ;; it's easier to see it when it contrasts with everything else so hard.
+  ;; especially true in the terminal. we set it in early-init.el,
+  ;; but some themes are weird and unset it, so this changes it back.
+  (set-cursor-color "#d00000")
+
   (setq use-file-dialog nil
 	use-dialog-box nil
 	inhibit-startup-screen t)
@@ -216,6 +221,8 @@ These need to go first because if something fails later I need these loaded. Abs
 #+end_src
 *** Utility Functions
 These are things that I use that are nice to have but aren't part of GNU Emacs. Although many of them are basically replaced by ~crux~ at this point, it's nice to keep around a vanilla implementation in case packages can't be installed.
+
+TODO: maybe follow the best advice and prefix it like this: https://rhodesmill.org/brandon/2009/commands-with-comma/
 #+begin_src emacs-lisp
   ;; redefine the annoying GNU advertisement
     (defun display-startup-echo-area-message ()
