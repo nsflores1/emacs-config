@@ -687,6 +687,7 @@ This package is finally fixed! Nice, smooth dimming of inactive buffers, that no
 #+begin_src emacs-lisp
   (use-package dimmer
     :ensure t
+    :disabled t ;; nope broken again
     :if window-system
     :diminish
     :config
