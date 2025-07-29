@@ -97,122 +97,155 @@ We didn't have the frame loaded and rendered in until this point, so we couldn't
 *** Behavior Fixes
 These need to go first because if something fails later I need these loaded. Absolutely vital that this works.
 #+begin_src emacs-lisp
-  ; genuinely baffling how this isn't the default
-  (global-set-key (kbd "C-x C-b") 'ibuffer)
-  ;need for code snippets
-  (require 'org-tempo)
+     ;; genuinely baffling how this isn't the default
+     (global-set-key (kbd "C-x C-b") 'ibuffer)
 
-  ; reread files from disk
-  (setopt auto-revert-avoid-polling t)
-  (setopt auto-revert-interval 5)
-  (setopt auto-revert-check-vc-info t)
-  (global-auto-revert-mode)
+     ;; hate to use a package here, but this should always work
+     (use-package ibuffer-vc
+       :ensure t)
 
-  ;; move through windows with Ctrl-<arrow keys>
-  (windmove-default-keybindings 'control)
+     (require 'ibuffer)
+   ;;  (require 'ibuffer-vc)
 
-  ;; fix archaic defaults
-  (setopt sentence-end-double-space nil)
+     ;; fix file sizes
+     (define-ibuffer-column size-h
+       (:name "Size"
+	      :inline t)
+       (file-size-human-readable (buffer-size)))
 
-  ;; make right-click do something sensible
-  (when (display-graphic-p)
-    (context-menu-mode))
+     (setq ibuffer-formats
+	   '((mark modified read-only locked " "
+		   (name 18 18 :left :elide)
+		   " "
+		   (size-h 9 -1 :right)
+		   " "
+		   (mode 16 16 :left :elide)
+		   " "
+		   filename-and-process)))
 
-  ;; don't litter file system with *~ backup files; put them all inside
-  ;; ~/.emacs.d/backup or wherever
-  (let ((auto-dir (expand-file-name "autosaves/" user-emacs-directory))
-	(backup-dir (expand-file-name "backups/" user-emacs-directory)))
-    (dolist (dir (list auto-dir backup-dir))
-      (unless (file-exists-p dir) (make-directory dir t)))
-    (setq backup-directory-alist `(("." . ,backup-dir))
-	  auto-save-file-name-transforms `((".*" ,auto-dir t))
-	  auto-save-list-file-prefix (concat auto-dir ".saves-")))
+  ;; ;; group by version controlled buffers
+  ;; (add-hook 'ibuffer-hook
+  ;; 	    (lambda ()
+  ;; 	      (ibuffer-vc-set-filter-groups-by-vc-root)
+  ;; 	      (unless (eq ibuffer-sorting-mode 'alphabetic)
+  ;; 		(ibuffer-do-sort-by-alphabetic))))
 
-  ;; highlight urls
-  ;; if we don't set it this way, xwidget breaks
-  (goto-address-prog-mode)
+     ;; need for code snippets
+     (require 'org-tempo)
 
-  ;; show the fill column
-  (setq-default display-fill-column-indicator-column 80)
-  (add-hook 'prog-mode-hook #'display-fill-column-indicator-mode)
+     ;; reread files from disk
+     (setopt auto-revert-avoid-polling t)
+     (setopt auto-revert-interval 5)
+     (setopt auto-revert-check-vc-info t)
+     (global-auto-revert-mode)
 
-  ;; force compliation to look nicer
-  (add-hook 'complilation-mode-hook 'visual-line-mode)
+     ;; move through windows with Ctrl-<arrow keys>
+     (windmove-default-keybindings 'control)
 
-  ;; nicer prompts
-  (fset 'yes-or-no-p 'y-or-n-p)
-  ;; doesn't work in older emacs
-  (when (version< emacs-version "29")
-    (when (boundp 'use-short-answers)
-      (setopt use-short-answers t)))
+     ;; fix archaic defaults
+     (setopt sentence-end-double-space nil)
 
-  ;; remember where we are and what we're doing
-  (save-place-mode 1)
-  (setq history-length 1000
-	recentf-max-saved-items 1000)
-  (recentf-mode 1)
-  (savehist-mode 1)
+     ;; make right-click do something sensible
+     (when (display-graphic-p)
+       (context-menu-mode))
 
-  ;; desktop mode for saving sessions
-  (setq desktop-dirname             "~/.emacs.d/desktop"
-	desktop-base-file-name      "session.el"
-	desktop-base-lock-name      "session.lock"
-	desktop-path                (list desktop-dirname)
-	desktop-save                t
-	desktop-load-locked-desktop nil
-	desktop-restore-eager 20
-	desktop-restore-frames t
-	desktop-auto-save-timeout 30)
-  (setq desktop-files-not-to-save "^$") ;; don’t skip tramp etc
-  (make-directory desktop-dirname t)
-  (desktop-save-mode 1)
-  (when (file-exists-p (desktop-full-file-name))
-    (desktop-read))
-  (add-hook 'kill-emacs-hook #'(lambda () (desktop-save-in-desktop-dir)))
+     ;; don't litter file system with *~ backup files; put them all inside
+     ;; ~/.emacs.d/backup or wherever
+     (let ((auto-dir (expand-file-name "autosaves/" user-emacs-directory))
+	   (backup-dir (expand-file-name "backups/" user-emacs-directory)))
+       (dolist (dir (list auto-dir backup-dir))
+	 (unless (file-exists-p dir) (make-directory dir t)))
+       (setq backup-directory-alist `(("." . ,backup-dir))
+	     auto-save-file-name-transforms `((".*" ,auto-dir t))
+	     auto-save-list-file-prefix (concat auto-dir ".saves-")))
 
-  ;; always use UTF-8
-  (prefer-coding-system 'utf-8)
-  (setq locale-coding-system 'utf-8)
-  (unless *is-a-windows*
-    (set-selection-coding-system 'utf-8))
+     ;; highlight urls
+     ;; if we don't set it this way, xwidget breaks
+     (goto-address-prog-mode)
 
-  ;; when we have two unique buffers, act like it
-  (require 'uniquify)
-  (setq uniquify-separator " • "
-	uniquify-after-kill-buffer-p t
-	uniquify-ignore-buffers-re "^\\*"
-	uniquify-buffer-name-style 'reverse)
+     ;; show the fill column
+     (setq-default display-fill-column-indicator-column 80)
+     (add-hook 'prog-mode-hook #'display-fill-column-indicator-mode)
 
-  ;; handle long files
-  (when (fboundp 'so-long-enable)
-    (add-hook 'after-init-hook 'so-long-enable))
+     ;; force compliation to look nicer
+     (add-hook 'complilation-mode-hook 'visual-line-mode)
 
-  ;; when we're a mac, use mdfind not find
-  (when *is-a-mac*
-    (setq-default locate-command "mdfind"))
+     ;; nicer prompts
+     (fset 'yes-or-no-p 'y-or-n-p)
+     ;; doesn't work in older emacs
+     (when (version< emacs-version "29")
+       (when (boundp 'use-short-answers)
+	 (setopt use-short-answers t)))
 
-  ;; make TRAMP faster
-  (use-package tramp
-    :config
-    (connection-local-set-profile-variables
-     'remote-direct-async-process
-     '((tramp-direct-async-process . t)))
-    (connection-local-set-profiles
-     '(:application tramp :protocol "ssh")
-     'remote-direct-async-process)
-    ;; Tips to speed up connections
-    ;; change tramp-verbose if you're having issues
-    (setq tramp-verbose 3)
-    (setq tramp-chunksize 2000)
-    (setq tramp-ssh-controlmaster-options nil))
+     ;; remember where we are and what we're doing
+     (save-place-mode 1)
+     (setq history-length 1000
+	   recentf-max-saved-items 1000)
+     (recentf-mode 1)
+     (savehist-mode 1)
 
+     ;; desktop mode for saving sessions
+     (setq desktop-dirname             "~/.emacs.d/desktop"
+	 desktop-base-file-name      "session.el"
+	 desktop-base-lock-name      "session.lock"
+	 desktop-path                (list desktop-dirname)
+	 desktop-save                t
+	 desktop-load-locked-desktop nil
+	 desktop-restore-eager 20
+	 desktop-restore-frames t
+	 desktop-auto-save-timeout 30)
+     (setq desktop-files-not-to-save "^$") ;; don’t skip tramp etc
+     (make-directory desktop-dirname t)
+     (desktop-save-mode 1)
+     (when (file-exists-p (desktop-full-file-name))
+       (desktop-read))
+     (add-hook 'kill-emacs-hook #'(lambda () (desktop-save-in-desktop-dir)))
 
-  ;; fix the ls related issues on macOS & Unix
-  (if (or *is-a-mac* *is-a-haiku* *is-a-unix*)
-      (progn
-	(setq ls-lisp-use-insert-directory-program nil
-	      dired-use-ls-dired nil)
-	(require 'ls-lisp)))
+     ;; always use UTF-8
+     (prefer-coding-system 'utf-8)
+     (setq locale-coding-system 'utf-8)
+     (unless *is-a-windows*
+       (set-selection-coding-system 'utf-8))
+
+     ;; when we have two unique buffers, act like it
+     (require 'uniquify)
+     (setq uniquify-separator " • "
+	   uniquify-after-kill-buffer-p t
+	   uniquify-ignore-buffers-re "^\\*"
+	   uniquify-buffer-name-style 'reverse)
+
+     ;; handle long files
+     (when (fboundp 'so-long-enable)
+       (add-hook 'after-init-hook 'so-long-enable))
+
+     ;; when we're a mac, use mdfind not find
+     (when *is-a-mac*
+       (setq-default locate-command "mdfind"))
+
+     ;; make TRAMP faster
+     (use-package tramp
+       :config
+       (connection-local-set-profile-variables
+	'remote-direct-async-process
+	'((tramp-direct-async-process . t)))
+       (connection-local-set-profiles
+	'(:application tramp :protocol "ssh")
+	'remote-direct-async-process)
+       ;; Tips to speed up connections
+       ;; change tramp-verbose if you're having issues
+       (setq tramp-verbose 3)
+       (setq tramp-chunksize 2000)
+       (setq tramp-ssh-controlmaster-options nil))
+
+     ;; make dired less awful to look at
+     (setq dired-listing-switches "-alh")
+
+     ;; fix the ls related issues on macOS & Unix
+     (if (or *is-a-mac* *is-a-haiku* *is-a-unix*)
+	 (progn
+	   (setq ls-lisp-use-insert-directory-program nil
+		 dired-use-ls-dired nil)
+	   (require 'ls-lisp)))
 #+end_src
 *** Utility Functions
 These are things that I use that are nice to have but aren't part of GNU Emacs. Although many of them are basically replaced by ~crux~ at this point, it's nice to keep around a vanilla implementation in case packages can't be installed.
@@ -378,7 +411,7 @@ This color-codes the syntax of code so that it's color coded by syntax level. Li
   (use-package prism
     :ensure t
     :vc (prism :url "https://github.com/alphapapa/prism.el"
-		 :branch "master"))
+		   :branch "master"))
 #+end_src
 **** ~anzu~
 Displays the amount of matches for any given search, which is quite useful.
@@ -690,9 +723,10 @@ Makes certain parts of the screen change color when idle. A nicer alternative to
 #+end_src
 **** ~pulsing-cursor~
 Blink and fade the cursor for a RGB-lighting like effect.
+TODO: this package is insanely bugged on modern Emacs
 #+begin_src emacs-lisp
   (use-package pulsing-cursor
-    :ensure t
+    :disabled t
     :diminish
     :vc (pulsing-cursor :url "https://github.com/abrichr/pulsing-cursor" :branch "main")
     :config
@@ -899,9 +933,25 @@ Flyspell is the worst. This is a much better alternative with almost no downside
   (setopt dictionary-use-single-buffer t
 	  dictionary-server "dict.org")
 #+end_src
+**** ~dumb-jump~: Replacement of ~xref~
+This package lets you put in a symbol in nearly any language and quickly warp to its definition. It's way cooler than it sounds. Note that you use the binding ~M-.~ to activate it, as it's an ~xref~ backend.
+
+Note that this is simply for in-project jumping: if you want to see stuff in libraries external to the project, you need ~lsp~.
+#+begin_src emacs-lisp
+  (use-package dumb-jump
+    :ensure t
+    :init
+    (add-hook 'xref-backend-functions #'dumb-jump-xref-activate)
+    (setq xref-show-definitions-function #'xref-show-definitions-completing-read))
+#+end_src
+**** ~deadgrep~: Replacement of ~grep~
+It's a nicer interface to ~grep~ but faster. It's even better because of the fact that it actually works with ~wgrep~, so you can basically mass edit. No more need for esoteric regexp. Just ~C-c C-p~ in the results buffer, and then ~C-c C-x~ to save the results, mass editing all the things.
+#+begin_src emacs-lisp
+  (use-package deadgrep
+    :ensure t)
+#+end_src
 **** A Bunch of ~eshell~ Fixes
 There's not really one big package that fixes ~eshell~, but a lot of these get really close to a full overhaul.
-
 Here's one that lets us see command feedback, like in ~zsh~:
 #+begin_src emacs-lisp
   (use-package eshell-fringe-status
@@ -1155,12 +1205,10 @@ It's hard to mentally picture all the undos, but since we already have infinity 
     (setq vundo-glyph-alist vundo-unicode-symbols))
 #+end_src
 **** ~yasnippet~: Dynamic templates, replace the macro system
-TODO: remove or rework this, I never use it
 This saves typing a lot of the same things over and over again by automatically completing them. This is really useful in more verbose languages.
 #+begin_src emacs-lisp
   (use-package yasnippet
     :ensure t
-    :disabled t
     :diminish yas-mode
     :config
     (yas-global-mode 1))
@@ -1277,6 +1325,15 @@ This is a crazy package. You can basically select everything you want in one fel
 	   ("C-<" . mc/mark-previous-like-this)
 	   ("C-c C-<" . mc/mark-all-like-this)))
 #+end_src
+**** ~move-dup~: Rectangular Edit
+This is amazing because it basically lets you drag and drop text without ever lifting your hand and using the mouse. Quite like the lazy copy-paste that some people do but without sloppily using the mouse. It's ~M~ and arrows for moving lines, ~C-M~ and arrows for duplicating the same line down.
+#+begin_src emacs-lisp
+  (use-package move-dup
+    :ensure t
+    :diminish
+    :init
+    (global-move-dup-mode))
+#+end_src
 **** ~expand-region~: Semantic Selection
 This is a lot faster than using the standard text commands. This one selects by semantic regions, so it's quite a lot faster.
 #+begin_src emacs-lisp
@@ -1375,7 +1432,14 @@ We are installing as few ~flycheck~ modes as possible, this is basically our onl
 	   (latex-mode . lsp)
 	   (tex-mode . lsp)
 	   (bibtex-mode . lsp)
-	   (yatex-mode . lsp)
+	   (latex-mode . lsp)
+	   (yaml-mode . lsp)
+	   (python-ts-mode . lsp)
+	   (java-ts-mode . lsp)
+	   (LaTeX-ts-mode . lsp)
+	   (latex-ts-mode . lsp)
+	   (tex-ts-mode . lsp)
+	   (yaml-ts-mode . lsp)
 	   (lsp-mode . lsp-enable-which-key-integration)))
 
   (use-package lsp-ui
@@ -1762,5 +1826,4 @@ But there's a polymode so we can write Jinja2 inside of Ansible:
     :ensure t
     :mode "\\.ps1\\'")
 #+end_src
-
 
