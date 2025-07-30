@@ -20,9 +20,11 @@ Firstly, make sure the following programs are installed:
 - ~fish~, used to make completion files for ~eshell~ (optional)
 - ~aspell~, used for enabling spellcheck in ~jinx~ (optional)
 - Any specific language servers/packages needed by certain modes:
+  - ~node~, to enable language server autoinstall for many languages
   - Shell: ~checkbashisms~ (optional)
   - LaTeX: ~texlab~ (or any other language server)
   - Common Lisp: ~sbcl~ (or any other implementation)
+  - Fortran: ~fortls~
   - Markdown: ~markdown~
   - Rust: ~rust-analyzer~
   - Python: ~black~ and ~pyright~ (all the other ones don't work)
@@ -1435,12 +1437,19 @@ We are installing as few ~flycheck~ modes as possible, this is basically our onl
 	   (bibtex-mode . lsp)
 	   (latex-mode . lsp)
 	   (yaml-mode . lsp)
+	   (bash-mode . lsp)
+	   (html-mode . lsp)
+	   (awk-mode . lsp)
+	   (fortran-mode . lsp)
 	   (python-ts-mode . lsp)
 	   (java-ts-mode . lsp)
 	   (LaTeX-ts-mode . lsp)
 	   (latex-ts-mode . lsp)
 	   (tex-ts-mode . lsp)
 	   (yaml-ts-mode . lsp)
+	   (bash-ts-mode . lsp)
+	   (fortran-ts-mode . lsp)
+	   (html-ts-mode . lsp)
 	   (lsp-mode . lsp-enable-which-key-integration)))
 
   (use-package lsp-ui
