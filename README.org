@@ -187,21 +187,21 @@ These need to go first because if something fails later I need these loaded. Abs
      (savehist-mode 1)
 
      ;; desktop mode for saving sessions
-     (setq desktop-dirname             "~/.emacs.d/desktop"
-	 desktop-base-file-name      "session.el"
-	 desktop-base-lock-name      "session.lock"
-	 desktop-path                (list desktop-dirname)
-	 desktop-save                t
-	 desktop-load-locked-desktop nil
-	 desktop-restore-eager 20
-	 desktop-restore-frames t
-	 desktop-auto-save-timeout 30)
-     (setq desktop-files-not-to-save "^$") ;; don’t skip tramp etc
-     (make-directory desktop-dirname t)
-     (desktop-save-mode 1)
-     (when (file-exists-p (desktop-full-file-name))
-       (desktop-read))
-     (add-hook 'kill-emacs-hook #'(lambda () (desktop-save-in-desktop-dir)))
+     ;; (setq desktop-dirname             "~/.emacs.d/desktop"
+     ;;     desktop-base-file-name      "session.el"
+     ;;     desktop-base-lock-name      "session.lock"
+     ;;     desktop-path                (list desktop-dirname)
+     ;;     desktop-save                t
+     ;;     desktop-load-locked-desktop nil
+     ;;     desktop-restore-eager 20
+     ;;     desktop-restore-frames t
+     ;;     desktop-auto-save-timeout 30)
+     ;; (setq desktop-files-not-to-save "^$") ;; don’t skip tramp etc
+     ;; (make-directory desktop-dirname t)
+     ;; (desktop-save-mode 1)
+     ;; (when (file-exists-p (desktop-full-file-name))
+     ;;   (desktop-read))
+     ;; (add-hook 'kill-emacs-hook #'(lambda () (desktop-save-in-desktop-dir)))
 
      ;; always use UTF-8
      (prefer-coding-system 'utf-8)
@@ -342,6 +342,7 @@ Really nice fix for the fact that stock Emacs can't do this.
   (setopt delete-by-moving-to-trash t)
 #+end_src
 **** ~which-key~
+TODO: this is in stock now, might want to remove
 #+begin_src emacs-lisp
   (use-package which-key
     :ensure t
@@ -1269,6 +1270,31 @@ An incredibly useful feature for debugging Elisp, this lets you step through a m
 #+begin_src emacs-lisp
   (use-package macrostep
     :ensure t)
+#+end_src
+**** ~easysession~: Replacement of ~desktop.el~
+~desktop.el~ is slow, annoying, and makes getting out of Emacs in a hurry a real pain. This is much faster:
+#+begin_src emacs-lisp
+  (use-package easysession
+    :ensure t
+    :custom
+    (easysession-save-interval (* 3 60)) ;; once every 3 minutes
+    (easysession-save-mode-lighter-show-session-name t)
+    (easysession-save-mode-line-misc-info t)
+    :init
+    (add-hook 'emacs-startup-hook #'easysession-load-including-geometry 102)
+    (add-hook 'emacs-startup-hook #'easysession-save-mode 103))
+#+end_src
+And bind it under ~C-c r~ because it's short for ~r~estore in my mind:
+#+begin_src emacs-lisp
+  ;; Main keybindings
+  (global-set-key (kbd "C-c r l") 'easysession-switch-to) ;; load
+  (global-set-key (kbd "C-c r s") 'easysession-save-as) ;; save
+
+  ;; Other keybindings
+  (global-set-key (kbd "C-c r L") 'easysession-switch-to-and-restore-geometry)
+  (global-set-key (kbd "C-c r d") 'easysession-delete)
+  (global-set-key (kbd "C-c r r") 'easysession-rename)
+  (global-set-key (kbd "C-c r R") 'easysession-reset)
 #+end_src
 *** Packages: Additions
 These packages add brand-new features and modes to Emacs.
