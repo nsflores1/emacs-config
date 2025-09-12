@@ -1253,6 +1253,7 @@ And, when we can, we can try to switch to an upgraded mode:
     (treesit-auto-install 'prompt)
     :config
     (treesit-auto-add-to-auto-mode-alist 'all)
+    (delete 'csharp treesit-auto-langs) ;; everything but c# which is bugged
     (global-treesit-auto-mode))
 #+end_src
 **** ~disproject~: Transient ~project.el~
@@ -1450,6 +1451,8 @@ We are installing as few ~flycheck~ modes as possible, this is basically our onl
 	   (bash-ts-mode . lsp)
 	   (fortran-ts-mode . lsp)
 	   (html-ts-mode . lsp)
+	   (csharp-mode . lsp)
+	   (csharp-ts-mode . lsp)
 	   (lsp-mode . lsp-enable-which-key-integration)))
 
   (use-package lsp-ui
@@ -1583,6 +1586,17 @@ This fixes syntax on save:
 And this lets us edit PIP standards:
 #+begin_src emacs-lisp
   (use-package pip-requirements
+    :ensure t)
+#+end_src
+**** Language: C#/.NET
+This is for the language:
+#+begin_src emacs-lisp
+  (use-package csharp-mode
+    :ensure t)
+#+end_src
+And this is for project files:
+#+begin_src emacs-lisp
+  (use-package csproj-mode
     :ensure t)
 #+end_src
 **** Language: Go
