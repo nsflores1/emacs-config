@@ -926,16 +926,17 @@ This is such a good feature that stock ~vterm~ should never be used, only ~multi
 **** ~jinx~: Replacement of ~flyspell~
 Flyspell is the worst. This is a much better alternative with almost no downsides. We'll also fix our dictionary while we're at it.
 #+begin_src emacs-lisp
-  (use-package jinx
-    :ensure t
-    :hook (((text-mode prog-mode) . jinx-mode))
-    :bind (("C-;" . jinx-correct))
-    :custom
-    (jinx-camel-modes '(prog-mode))
-    (jinx-delay 0.01))
+    (use-package jinx
+      :ensure t
+      :hook (((text-mode prog-mode) . jinx-mode))
+      :bind (("C-;" . jinx-correct))
+      :custom
+      (jinx-languages "en" "jp")
+      (jinx-camel-modes '(prog-mode))
+      (jinx-delay 0.01))
 
-  (setopt dictionary-use-single-buffer t
-	  dictionary-server "dict.org")
+    (setopt dictionary-use-single-buffer t
+	    dictionary-server "dict.org")
 #+end_src
 **** ~dumb-jump~: Replacement of ~xref~
 This package lets you put in a symbol in nearly any language and quickly warp to its definition. It's way cooler than it sounds. Note that you use the binding ~M-.~ to activate it, as it's an ~xref~ backend.
@@ -1876,4 +1877,3 @@ But there's a polymode so we can write Jinja2 inside of Ansible:
     :ensure t
     :mode "\\.ps1\\'")
 #+end_src
-
