@@ -713,17 +713,16 @@ This package is finally fixed! Nice, smooth dimming of inactive buffers, that no
 Makes certain parts of the screen change color when idle. A nicer alternative to ~zone~. May want to disable; raises CPU while idle. This simplifies life a lot.
 #+begin_src emacs-lisp
   ;; TODO: doesn't actually work, package is bugged
-  ;; (use-package huecycle
-  ;;   :disabled t
-  ;;   :if window-system
-  ;;   :config
-  ;;   (huecycle-set-faces
-  ;;    ((background . (hl-line mode-line))
-  ;;     :random-color-hue-range (0.0 1.0)
-  ;;     :random-color-saturation-range (0.8 1.0)
-  ;;     :random-color-luminance-range (0.8 0.9))
-  ;;     :speed 3.0)
-  ;;   (huecycle-when-idle 10))
+  (use-package huecycle
+    :ensure t
+    :init
+    (huecycle-set-faces
+     ((background . hl-line)
+      :random-color-hue-range (0.0 1.0)
+      :random-color-saturation-range (0.4 0.6)
+      :random-color-luminance-range (0.2 0.3))
+      :speed 3.0)
+    (huecycle-when-idle 10))
 #+end_src
 **** ~pulsing-cursor~
 Blink and fade the cursor for a RGB-lighting like effect.
@@ -735,7 +734,7 @@ TODO: this package is insanely bugged on modern Emacs
     :vc (pulsing-cursor :url "https://github.com/abrichr/pulsing-cursor" :branch "main")
     :config
     (pulsing-cursor-mode +1))
-  
+
 #+end_src
 **** ~goggles~
 #+begin_src emacs-lisp
