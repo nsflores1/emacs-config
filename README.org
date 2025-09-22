@@ -714,7 +714,7 @@ Makes certain parts of the screen change color when idle. A nicer alternative to
 #+begin_src emacs-lisp
   ;; TODO: doesn't actually work, package is bugged
   (use-package huecycle
-    :ensure t
+    :disabled t
     :init
     (huecycle-set-faces
      ((background . hl-line)
