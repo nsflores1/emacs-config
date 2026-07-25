@@ -1389,6 +1389,22 @@ This is a crazy package. You can basically select everything you want in one fel
 	   ("C-<" . mc/mark-previous-like-this)
 	   ("C-c C-<" . mc/mark-all-like-this)))
 #+end_src
+**** ~binky~: Jumping Cursor
+This is another crazy package. You can select many different cursor positions as registers, marked with single keys, and jump around to them. it's a lot like Vim's feature for this, but better because it's got really good memory.
+#+begin_src emacs-lisp
+  (use-package binky
+    :ensure t
+    :bind (("C-c b b" . binky-binky)
+	   ("C-c b c" . binky-clean)
+	   ("C-c b s" . binky-save)
+	   ("C-c b r" . binky-restore)
+	   ("C-c b n" . binky-next-in-buffer)
+	   ("C-c b p" . binky-previous-in-buffer))
+    :init
+    (progn
+      (binky-mode)
+      (binky-margin-mode)))
+#+end_src
 **** ~move-dup~: Rectangular Edit
 This is amazing because it basically lets you drag and drop text without ever lifting your hand and using the mouse. Quite like the lazy copy-paste that some people do but without sloppily using the mouse. It's ~M~ and arrows for moving lines, ~C-M~ and arrows for duplicating the same line down.
 #+begin_src emacs-lisp
