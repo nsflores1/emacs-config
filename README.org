@@ -61,6 +61,15 @@ And then install ~diminish~ and ~vc-use-package~ since we'll call it a lot later
       (unless (package-installed-p 'vc-use-package)
 	(package-vc-install "https://github.com/slotThe/vc-use-package")))
 #+end_src
+
+We need to now ~exec-path-from-shell~:
+#+begin_src emacs-lisp
+  (use-package exec-path-from-shell
+    :ensure t)
+
+  (when (memq window-system '(mac ns x))
+      (exec-path-from-shell-initialize))
+#+end_src
 *** Graphics Fixes
 We didn't have the frame loaded and rendered in until this point, so we couldn't fix stuff that was really visually annoying. Now, we can.
 #+begin_src emacs-lisp
@@ -70,19 +79,21 @@ We didn't have the frame loaded and rendered in until this point, so we couldn't
   (setq window-sides-vertical t)
 
   (setq use-file-dialog nil
-	use-dialog-box nil
-	inhibit-startup-screen t)
+  	use-dialog-box nil
+  	inhibit-startup-screen t)
+
+  (setq mac-command-modifier 'meta)
 
   (setopt line-number-mode t
-	  column-number-mode t
-	  x-underline-at-descent-line nil
-	  switch-to-buffer-obey-display-actions t
-	  show-trailing-whitespace nil
-	  indicate-buffer-boundaries 'left)
+  	  column-number-mode t
+  	  x-underline-at-descent-line nil
+  	  switch-to-buffer-obey-display-actions t
+  	  show-trailing-whitespace nil
+  	  indicate-buffer-boundaries 'left)
 
   ; horizontal mouse scrolling
   (setopt mouse-wheel-tilt-scroll t
-	  mouse-wheel-flip-direction t)
+  	  mouse-wheel-flip-direction t)
 
   ; line numbers in programming modes
   (add-hook 'prog-mode-hook 'display-line-numbers-mode)
@@ -115,18 +126,18 @@ These need to go first because if something fails later I need these loaded. Abs
      ;; fix file sizes
      (define-ibuffer-column size-h
        (:name "Size"
-	      :inline t)
+  	      :inline t)
        (file-size-human-readable (buffer-size)))
 
      (setq ibuffer-formats
-	   '((mark modified read-only locked " "
-		   (name 18 18 :left :elide)
-		   " "
-		   (size-h 9 -1 :right)
-		   " "
-		   (mode 16 16 :left :elide)
-		   " "
-		   filename-and-process)))
+  	   '((mark modified read-only locked " "
+  		   (name 18 18 :left :elide)
+  		   " "
+  		   (size-h 9 -1 :right)
+  		   " "
+  		   (mode 16 16 :left :elide)
+  		   " "
+  		   filename-and-process)))
 
   ;; ;; group by version controlled buffers
   ;; (add-hook 'ibuffer-hook
@@ -157,12 +168,12 @@ These need to go first because if something fails later I need these loaded. Abs
      ;; don't litter file system with *~ backup files; put them all inside
      ;; ~/.emacs.d/backup or wherever
      (let ((auto-dir (expand-file-name "autosaves/" user-emacs-directory))
-	   (backup-dir (expand-file-name "backups/" user-emacs-directory)))
+  	   (backup-dir (expand-file-name "backups/" user-emacs-directory)))
        (dolist (dir (list auto-dir backup-dir))
-	 (unless (file-exists-p dir) (make-directory dir t)))
+  	 (unless (file-exists-p dir) (make-directory dir t)))
        (setq backup-directory-alist `(("." . ,backup-dir))
-	     auto-save-file-name-transforms `((".*" ,auto-dir t))
-	     auto-save-list-file-prefix (concat auto-dir ".saves-")))
+  	     auto-save-file-name-transforms `((".*" ,auto-dir t))
+  	     auto-save-list-file-prefix (concat auto-dir ".saves-")))
 
      ;; highlight urls
      ;; if we don't set it this way, xwidget breaks
@@ -180,31 +191,14 @@ These need to go first because if something fails later I need these loaded. Abs
      ;; doesn't work in older emacs
      (when (version< emacs-version "29")
        (when (boundp 'use-short-answers)
-	 (setopt use-short-answers t)))
+  	 (setopt use-short-answers t)))
 
      ;; remember where we are and what we're doing
      (save-place-mode 1)
      (setq history-length 1000
-	   recentf-max-saved-items 1000)
+  	   recentf-max-saved-items 1000)
      (recentf-mode 1)
      (savehist-mode 1)
-
-     ;; desktop mode for saving sessions
-     ;; (setq desktop-dirname             "~/.emacs.d/desktop"
-     ;;     desktop-base-file-name      "session.el"
-     ;;     desktop-base-lock-name      "session.lock"
-     ;;     desktop-path                (list desktop-dirname)
-     ;;     desktop-save                t
-     ;;     desktop-load-locked-desktop nil
-     ;;     desktop-restore-eager 20
-     ;;     desktop-restore-frames t
-     ;;     desktop-auto-save-timeout 30)
-     ;; (setq desktop-files-not-to-save "^$") ;; don’t skip tramp etc
-     ;; (make-directory desktop-dirname t)
-     ;; (desktop-save-mode 1)
-     ;; (when (file-exists-p (desktop-full-file-name))
-     ;;   (desktop-read))
-     ;; (add-hook 'kill-emacs-hook #'(lambda () (desktop-save-in-desktop-dir)))
 
      ;; always use UTF-8
      (prefer-coding-system 'utf-8)
@@ -215,9 +209,9 @@ These need to go first because if something fails later I need these loaded. Abs
      ;; when we have two unique buffers, act like it
      (require 'uniquify)
      (setq uniquify-separator " • "
-	   uniquify-after-kill-buffer-p t
-	   uniquify-ignore-buffers-re "^\\*"
-	   uniquify-buffer-name-style 'reverse)
+  	   uniquify-after-kill-buffer-p t
+  	   uniquify-ignore-buffers-re "^\\*"
+  	   uniquify-buffer-name-style 'reverse)
 
      ;; handle long files
      (when (fboundp 'so-long-enable)
@@ -231,11 +225,11 @@ These need to go first because if something fails later I need these loaded. Abs
      (use-package tramp
        :config
        (connection-local-set-profile-variables
-	'remote-direct-async-process
-	'((tramp-direct-async-process . t)))
+  	'remote-direct-async-process
+  	'((tramp-direct-async-process . t)))
        (connection-local-set-profiles
-	'(:application tramp :protocol "ssh")
-	'remote-direct-async-process)
+  	'(:application tramp :protocol "ssh")
+  	'remote-direct-async-process)
        ;; Tips to speed up connections
        ;; change tramp-verbose if you're having issues
        (setq tramp-verbose 3)
@@ -247,10 +241,10 @@ These need to go first because if something fails later I need these loaded. Abs
 
      ;; fix the ls related issues on macOS & Unix
      (if (or *is-a-mac* *is-a-haiku* *is-a-unix*)
-	 (progn
-	   (setq ls-lisp-use-insert-directory-program nil
-		 dired-use-ls-dired nil)
-	   (require 'ls-lisp)))
+  	 (progn
+  	   (setq ls-lisp-use-insert-directory-program nil
+  		 dired-use-ls-dired nil)
+  	   (require 'ls-lisp)))
 #+end_src
 *** Utility Functions
 These are things that I use that are nice to have but aren't part of GNU Emacs. Although many of them are basically replaced by ~crux~ at this point, it's nice to keep around a vanilla implementation in case packages can't be installed.
@@ -258,9 +252,9 @@ These are things that I use that are nice to have but aren't part of GNU Emacs. 
 TODO: maybe follow the best advice and prefix it like this: https://rhodesmill.org/brandon/2009/commands-with-comma/
 #+begin_src emacs-lisp
   ;; redefine the annoying GNU advertisement
-    (defun display-startup-echo-area-message ()
-      "Gets rid of that annoying GNU advertisement."
-      (message "[init.el] Init complete. Get out there!"))
+  (defun display-startup-echo-area-message ()
+    "Gets rid of that annoying GNU advertisement."
+    (message "[init.el] Init complete. Get out there!"))
 
   ;; kill the buffer and file
   (defun personal/delete-this-file-and-buffer ()
@@ -325,6 +319,11 @@ TODO: maybe follow the best advice and prefix it like this: https://rhodesmill.o
     (mapc 'kill-buffer (buffer-list)))
   (global-set-key (kbd "C-M-s-k") 'close-all-buffers)
 
+  ;; indent the whole buffer automatically
+  (defun personal/indent-buffer ()
+    (interactive)
+    (indent-region (point-min) (point-max)))
+
   ;; quickly visit our configuration
   (defun personal/config-visit ()
     (interactive)
@@ -368,16 +367,6 @@ Also, automatically retry if we can't do it for whatever reason.
     :init
     (require 'auto-sudoedit)
     (auto-sudoedit-mode 1))
-#+end_src
-**** ~exec-path-from-shell~
-We run it as non-interactive because Anaconda, if we have it installed, will slow down Emacs.
-#+begin_src emacs-lisp
-  (use-package exec-path-from-shell
-    :ensure t
-    :config
-    (setq exec-path-from-shell-arguments nil)
-    (when (memq window-system '(mac ns x))
-      (exec-path-from-shell-initialize)))
 #+end_src
 **** ~async~
 #+begin_src emacs-lisp
@@ -594,14 +583,14 @@ And then, of course, ~auto-dark-mode~:
     :hook
     (auto-dark-dark-mode
      . (lambda ()
-	 (set-face-background 'why-this-annotate-heat-map-cold "#203448")
-	 (set-face-background 'why-this-annotate-heat-map-warm "#382f27")
-	 (message "[auto-dark] Dark mode theme automatically applied")))
+  	 (set-face-background 'why-this-annotate-heat-map-cold "#203448")
+  	 (set-face-background 'why-this-annotate-heat-map-warm "#382f27")
+  	 (message "[auto-dark] Dark mode theme automatically applied")))
     (auto-dark-light-mode
      . (lambda ()
-	 (set-face-background 'why-this-annotate-heat-map-cold "#dde3f4")
-	 (set-face-background 'why-this-annotate-heat-map-warm "#f0e0d4")
-	 (message "[auto-dark] Light mode theme automatically applied")))
+  	 (set-face-background 'why-this-annotate-heat-map-cold "#dde3f4")
+  	 (set-face-background 'why-this-annotate-heat-map-warm "#f0e0d4")
+  	 (message "[auto-dark] Light mode theme automatically applied")))
     :init (auto-dark-mode))
 #+end_src
 **** Modeline: ~telephone-line~
@@ -614,23 +603,23 @@ It's a bit nicer looking than the powerbars, which are too flashy for me.
     :diminish telephone-line-mode
     :config
     (setq telephone-line-lhs
-	  '((evil   . (telephone-line-flycheck-segment))
-	    (accent . (telephone-line-vc-segment
-		       telephone-line-process-segment))
-	    (nil    . (telephone-line-projectile-segment
-		       telephone-line-buffer-segment)))
-	  telephone-line-rhs
-	  '((nil    . (telephone-line-position-segment))
-	    (accent . (telephone-line-major-mode-segment))
-	    ;; I used to put minor mode here but it's way too annoying in practice.
-	    ;; This is where our LSP info will live
-	    (evil   . (telephone-line-misc-info-segment)))
-	  telephone-line-height 24
-	  ;; different layouts don't render well on macOS.
-	  telephone-line-primary-left-separator 'telephone-line-nil
-	  telephone-line-secondary-left-separator 'telephone-line-nil
-	  telephone-line-primary-right-separator 'telephone-line-nil
-	  telephone-line-secondary-right-separator 'telephone-line-nil)
+  	  '((evil   . (telephone-line-flycheck-segment))
+  	    (accent . (telephone-line-vc-segment
+  		       telephone-line-process-segment))
+  	    (nil    . (telephone-line-projectile-segment
+  		       telephone-line-buffer-segment)))
+  	  telephone-line-rhs
+  	  '((nil    . (telephone-line-position-segment))
+  	    (accent . (telephone-line-major-mode-segment))
+  	    ;; I used to put minor mode here but it's way too annoying in practice.
+  	    ;; This is where our LSP info will live
+  	    (evil   . (telephone-line-misc-info-segment)))
+  	  telephone-line-height 24
+  	  ;; different layouts don't render well on macOS.
+  	  telephone-line-primary-left-separator 'telephone-line-nil
+  	  telephone-line-secondary-left-separator 'telephone-line-nil
+  	  telephone-line-primary-right-separator 'telephone-line-nil
+  	  telephone-line-secondary-right-separator 'telephone-line-nil)
     (telephone-line-mode 1))
 #+end_src
 **** ~solaire~
@@ -757,7 +746,10 @@ Highlight the code level we're at.
   (use-package indent-bars
     :ensure t
     :diminish
-    :hook (prog-mode . indent-bars-mode))
+    :hook (prog-mode . indent-bars-mode)
+    :config
+    ;; come back to this in Emacs 31
+    (setq indent-bars-prefer-character t))
 #+end_src
 **** ~highlight-escape-sequences~
 #+begin_src emacs-lisp
@@ -817,7 +809,6 @@ An extremely small system monitor in the idle modeline. Very good for full-scree
 #+begin_src emacs-lisp
   (use-package symon
     :ensure t
-    :disabled t
     :diminish
     :config
     (symon-mode))
@@ -929,13 +920,13 @@ Faster but requires the compiled module so this can fail quite dramatically. It 
     ;; use classic terminal colors
     ;; also, this gives us a dark mode terminal all the time
     (setq vterm-color-black   "#000000"
-	vterm-color-white   "#ffffff"
-	vterm-color-red     "#ff5c57"
-	vterm-color-green   "#5af78e"
-	vterm-color-yellow  "#f3f99d"
-	vterm-color-blue    "#57c7ff"
-	vterm-color-magenta "#ff6ac1"
-	vterm-color-cyan    "#9aedfe"))
+  	vterm-color-white   "#ffffff"
+  	vterm-color-red     "#ff5c57"
+  	vterm-color-green   "#5af78e"
+  	vterm-color-yellow  "#f3f99d"
+  	vterm-color-blue    "#57c7ff"
+  	vterm-color-magenta "#ff6ac1"
+  	vterm-color-cyan    "#9aedfe"))
 #+end_src
 **** ~multi-term~ & ~multi-vterm~: Summon Many Terminals
 We often need more than one terminal when we're doing things. Let's add that:
@@ -952,17 +943,17 @@ This is such a good feature that stock ~vterm~ should never be used, only ~multi
 **** ~jinx~: Replacement of ~flyspell~
 Flyspell is the worst. This is a much better alternative with almost no downsides. We'll also fix our dictionary while we're at it.
 #+begin_src emacs-lisp
-    (use-package jinx
-      :ensure t
-      :hook (((text-mode prog-mode) . jinx-mode))
-      :bind (("C-;" . jinx-correct))
-      :custom
-      (jinx-languages "en" "jp")
-      (jinx-camel-modes '(prog-mode))
-      (jinx-delay 0.01))
+  (use-package jinx
+    :ensure t 
+    :hook (((text-mode prog-mode) . jinx-mode))
+    :bind (("C-;" . jinx-correct))
+    :custom
+    (jinx-languages "en" "jp")
+    (jinx-camel-modes '(prog-mode))
+    (jinx-delay 0.01))
 
-    (setopt dictionary-use-single-buffer t
-	    dictionary-server "dict.org")
+  (setopt dictionary-use-single-buffer t
+  	    dictionary-server "dict.org")
 #+end_src
 **** ~dumb-jump~: Replacement of ~xref~
 This package lets you put in a symbol in nearly any language and quickly warp to its definition. It's way cooler than it sounds. Note that you use the binding ~M-.~ to activate it, as it's an ~xref~ backend.
@@ -1246,14 +1237,12 @@ This saves typing a lot of the same things over and over again by automatically 
   ;; the actual snippets
   (use-package yasnippet-snippets
     :ensure t
-    :disabled t
     :after yasnippet)
 #+end_src
 What's really nice is that we don't even really need to know them. We can just magically filter through them with some good old fashioned ~completion-at-point~ magic:
 #+begin_src emacs-lisp
   (use-package yasnippet-capf
     :ensure t
-    :disabled t
     :after cape
     :config
     (add-to-list 'completion-at-point-functions #'yasnippet-capf))
