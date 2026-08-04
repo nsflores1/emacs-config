@@ -80,6 +80,9 @@
 (setq default-frame-alist '((vertical-scroll-bars . nil)
                             (horizontal-scroll-bars . nil)))
 
+;; disable package.el
+(setq package-enable-at-startup nil)
+
 (message "[init.el] graphical frames edited, if they exist")
 ;; early-init.el ends here
 

@@ -43,32 +43,37 @@ Ideally in a future version of this configuration, it would prompt you to instal
 - Add ~consult-gh~ support
 ** The Actual Configuration 📖
 *** Package Manager & Key Tools
-The default ~package.el~ is disabled by ~early-init.el~. Good old ~package.el~ is still the way to go, because we like stability and all the other ones eat our computer for breakfast. But we still need to define our repos:
+The default ~package.el~ is disabled by ~early-init.el~. Let's use ~Elpaca~ to manage packages, since we defined it in ~init.el~:
 #+begin_src emacs-lisp
-      (setq package-archives
-	    '(("gnu" . "https://elpa.gnu.org/packages/")
-	      ("melpa" . "https://melpa.org/packages/")
-	      ("nongnu" . "https://elpa.nongnu.org/nongnu/")))
+  (elpaca elpaca-use-package
+  	(elpaca-use-package-mode))
 
-  (package-initialize) ;; not gonna need that
+  (elpaca-wait)
 #+end_src
-And then install ~diminish~ and ~vc-use-package~ since we'll call it a lot later:
+And then install ~diminish~ and ~transient~ since we'll call them a lot later:
 #+begin_src emacs-lisp
   (use-package diminish
-    :ensure t)
+    :ensure (:wait t)
+    :demand t)
 
-  (if (version< emacs-version "30")
-      (unless (package-installed-p 'vc-use-package)
-	(package-vc-install "https://github.com/slotThe/vc-use-package")))
+  (use-package transient
+    :ensure (:wait t)
+    :demand t)
+
+  (elpaca-wait)
 #+end_src
-
-We need to now ~exec-path-from-shell~:
+We need to now ~exec-path-from-shell~ first, before anything else:
 #+begin_src emacs-lisp
   (use-package exec-path-from-shell
-    :ensure t)
-
-  (when (memq window-system '(mac ns x))
-      (exec-path-from-shell-initialize))
+    :ensure (:wait t)
+    :demand t
+    :init
+    (when (memq window-system '(mac ns x))
+      (exec-path-from-shell-initialize)))
+#+end_src
+Now sync everything, one more time.
+#+begin_src emacs-lisp
+  (elpaca-wait)
 #+end_src
 *** Graphics Fixes
 We didn't have the frame loaded and rendered in until this point, so we couldn't fix stuff that was really visually annoying. Now, we can.
@@ -76,6 +81,7 @@ We didn't have the frame loaded and rendered in until this point, so we couldn't
   (tool-bar-mode -1)
   (scroll-bar-mode -1)
   (pixel-scroll-mode)
+  (pixel-scroll-precision-mode)
   (setq window-sides-vertical t)
 
   (setq use-file-dialog nil
@@ -83,6 +89,8 @@ We didn't have the frame loaded and rendered in until this point, so we couldn't
   	inhibit-startup-screen t)
 
   (setq mac-command-modifier 'meta)
+
+  (setq use-package-compute-statistics t)
 
   (setopt line-number-mode t
   	  column-number-mode t
@@ -400,14 +408,6 @@ This package lets us mass edit search results, which is amazing!
     :config
     (setq wgrep-auto-save-buffer t))
 #+end_src
-**** ~prism~
-This color-codes the syntax of code so that it's color coded by syntax level. Like a superpowered version of syntax highlighting.
-#+begin_src emacs-lisp
-  (use-package prism
-    :ensure t
-    :vc (prism :url "https://github.com/alphapapa/prism.el"
-		   :branch "master"))
-#+end_src
 **** ~anzu~
 Displays the amount of matches for any given search, which is quite useful.
 #+begin_src emacs-lisp
@@ -520,26 +520,6 @@ Shows the replacements that we're going to do. It shows what the buffer will loo
     :init
     (visual-replace-global-mode 1))
 #+end_src
-**** ~screenshot~
-Quickly take a screenshot of a certain region! Very nice indeed.
-TODO: this function is broken on macOS, only works on Linux
-#+begin_src emacs-lisp
-    (use-package screenshot
-      :ensure t
-      :vc (screenshot :url "https://github.com/tecosaur/screenshot"
-		   :branch "master"))
-#+end_src
-**** ~mac-pseudo-daemon~
-This does a neat trick where we get Emacs daemon-like functionality on macOS. Very nice!
-#+begin_src emacs-lisp
-  (use-package mac-pseduo-daemon
-    :disabled t
-    :ensure nil
-    :vc (mac-pseudo-daemon :url "https://github.com/DarwinAwardWinner/mac-pseudo-daemon"
-			   :branch "main")
-    :init
-    (mac-pseudo-daemon-mode))
-#+end_src
 **** ~decide~
 TODO: this package is terrible. Write your own...?
 #+begin_src emacs-lisp
@@ -562,14 +542,15 @@ Gruvbox is simply the best theme ever invented, but sometimes I like to have som
 
   (use-package solarized-theme
     :ensure t
-    :demand t
     :config
     (setq solarized-high-contrast-mode-line nil
-	  solarized-distinct-doc-face t
-	  solarized-distinct-fringe-background t
-	  solarized-emphasize-indicators t
-	  x-underline-at-descent-line t))
-  (load-theme 'solarized-selenized-black t)
+  	  solarized-distinct-doc-face t
+  	  solarized-distinct-fringe-background t
+  	  solarized-emphasize-indicators t
+  	  x-underline-at-descent-line t)
+    :init
+    (load-theme 'solarized-selenized-black t))
+
 #+end_src
 And then, of course, ~auto-dark-mode~:
 #+begin_src emacs-lisp
@@ -598,7 +579,6 @@ It's a bit nicer looking than the powerbars, which are too flashy for me.
 #+begin_src emacs-lisp
   (use-package telephone-line
     :ensure t
-    :demand t
     :if window-system
     :diminish telephone-line-mode
     :config
@@ -723,12 +703,11 @@ Makes certain parts of the screen change color when idle. A nicer alternative to
 Blink and fade the cursor for a RGB-lighting like effect.
 #+begin_src emacs-lisp
   (use-package pulsing-cursor
-    :ensure t
+    :elpaca (pulsing-cursor :host github :repo "jasonjckn/pulsing-cursor")
+    :demand t
     :diminish
-    :vc (pulsing-cursor :url "https://github.com/jasonjckn/pulsing-cursor" :branch "main")
     :config
     (pulsing-cursor-mode +1))
-
 #+end_src
 **** ~goggles~
 #+begin_src emacs-lisp
@@ -818,9 +797,10 @@ Add a little fortune to our scratch buffers.
 #+begin_src emacs-lisp
   ;; make the image
   (use-package cowsay
-    :ensure t
+    :ensure (:wait t)
     :init
     (cowsay-load-cow-file (expand-file-name "tux.cow" user-emacs-directory)))
+
 
   ;; wrap the cow in comments
   (defun personal/prefix-comment (arg)
@@ -832,7 +812,9 @@ Add a little fortune to our scratch buffers.
 
   ;; now actually set our scratch buffer
   (setq inhibit-startup-message t
-	initial-scratch-message (concat (personal/prefix-comment  (cowsay-string "Emacs has finished starting." "tux")) "\n\n"))
+        initial-scratch-message (concat (personal/prefix-comment  (cowsay-string "Emacs has finished starting." "tux")) "\n\n"))
+
+
 #+end_src
 **** ~org-superstar-mode~
 Makes ~org-mode~ have some prettier-looking bullet points!
@@ -840,8 +822,7 @@ Makes ~org-mode~ have some prettier-looking bullet points!
   (use-package org-superstar
     :ensure t
     :diminish
-    :config
-    (add-hook 'org-mode-hook (lambda () (org-superstar-mode 1))))
+    :hook (org-mode . org-superstar-mode))
 #+end_src
 **** ~dired-fl~
 This adds some special fonts to the ~dired~ mode to make it nicer.
@@ -1050,14 +1031,15 @@ Basically exactly what it says. Makes every menu better.
 #+begin_src emacs-lisp  
   (use-package vertico
     :ensure t
-    :init
+    :demand t
+    :config
     (vertico-mode))
 
   (use-package vertico-directory
     :ensure nil
     :after vertico
     :bind (:map vertico-map
-		("M-DEL" . vertico-directory-delete-word)))
+  		("M-DEL" . vertico-directory-delete-word)))
 #+end_src
 **** ~marginalia~: Annotations with Completions
 Helps you figure out what exactly that option does.
@@ -1081,63 +1063,69 @@ It's a good replacement for ~company~.
 #+begin_src emacs-lisp
   (use-package corfu
     :ensure t
+    :demand t
     :diminish corfu-mode corfu-popupinfo-mode
-    :init
-    (global-corfu-mode)
-    (corfu-history-mode)
-    (corfu-popupinfo-mode)
     :bind (:map corfu-map
-		("RET" . nil)
-		("M-d" . corfu-popupinfo-toggle))
+  		("RET" . nil)
+  		("M-d" . corfu-popupinfo-toggle))
     ;; if we use eshell, be careful not to autocomplete
     :hook (eshell-mode-hook . (lambda ()
-				(setq-local corfu-auto nil)
-				(corfu-mode)))
+  				(setq-local corfu-auto nil)
+  				(corfu-mode)))
     :config
     ;; use corfu in the minibuffer
     (defun corfu-enable-always-in-minibuffer ()
       (unless (or (bound-and-true-p mct--active)
-		    (bound-and-true-p vertico--input))
+  		    (bound-and-true-p vertico--input))
       (setq-local corfu-auto nil)
       (corfu-mode 1)))
     (add-hook 'minibuffer-setup-hook #'corfu-enable-always-in-minibuffer 1)
     ;; automatic completion!
     (setq corfu-auto t
-	  ;; I don't care what the warnings say, this setting rules
-	  corfu-auto-prefix 2
-	  corfu-quit-no-match 'separator
-	  corfu-echo-documentation nil)
+  	  ;; I don't care what the warnings say, this setting rules
+  	  corfu-auto-prefix 2
+  	  corfu-quit-no-match 'separator
+  	  corfu-echo-documentation nil)
     ;; turn on corfu's plugins
-    (corfu-history-mode 1))
+    (corfu-history-mode 1)
+    (global-corfu-mode)
+    (corfu-popupinfo-mode))
 #+end_src
 We also want some popups and to have it work in the terminal:
-TODO: this is fixed in Emacs 31.
 #+begin_src emacs-lisp
   (use-package corfu-terminal
     :if (not (display-graphic-p))
     :ensure t
     :diminish
-    :config
+    :init
     (corfu-terminal-mode))
+#+end_src
+This is an extremely important package, so we must:
+#+begin_src emacs-lisp
+  (elpaca-wait)
 #+end_src
 **** ~cape~: More Completions For ~corfu~
 ~corfu~ ships with a lot of built in configurations but it's still missing a lot of the functionality that ~company~ ships with. This package adds that back in so that it works properly. I don't want to trigger these manually, so I handle them all through ~corfu~. Also, the dictionary is only turned on selectively for performance reasons. Overall quite useful though. Dict gets better with history and is otherwise quite useless.
 #+begin_src emacs-lisp
   (use-package cape
     :ensure t
+    :demand t
     :config
     (setq cape-dict-file "/usr/share/dict/words")
     :init
     (add-hook 'completion-at-point-functions #'cape-dabbrev)
     (add-hook 'completion-at-point-functions #'cape-file)
     (add-hook 'completion-at-point-functions #'cape-history))
-
+#+end_src
+This is an extremely important package, so we must:
+#+begin_src emacs-lisp
+  (elpaca-wait)
 #+end_src
 **** ~helpful~: Help System
 #+begin_src emacs-lisp
   (use-package helpful
     :ensure t
-    :config
+    :init
     (global-set-key (kbd "C-h f") #'helpful-callable)
     (global-set-key (kbd "C-h v") #'helpful-variable)
     (global-set-key (kbd "C-h k") #'helpful-key)
@@ -1162,7 +1150,7 @@ Moves to the next logical line position, not just to the end of the line.
   (use-package mwim
     :ensure t
     :diminish
-    :config
+    :init
     (global-set-key (kbd "C-a") 'mwim-beginning)
     (global-set-key (kbd "C-e") 'mwim-end))
 #+end_src
@@ -1200,11 +1188,10 @@ Emacs undo can be confusing and it also doesn't persist for all of time, which i
 #+begin_src emacs-lisp
   (use-package undo-fu
     :ensure t
-    :config
+    :init
     (global-unset-key (kbd "C-z"))
     (global-set-key (kbd "C-z")   'undo-fu-only-undo)
     (global-set-key (kbd "C-S-z") 'undo-fu-only-redo)
-    :init
     ;; we have like so much ram nowadays
     (setq undo-limit 67108864)
     (setq undo-strong-limit 100663296)
@@ -1261,16 +1248,15 @@ This is technically in Emacs now, but the version it ships with can sometimes be
     :ensure t
     :after tree-sitter)
 #+end_src
-And, when we can, we can try to switch to an upgraded mode:
+Of course, once it's installed, we want to replace our modes. If this fails, make sure to run ~M-x treesit-install-language-grammar~ per language.
+TODO: add more langs in there
 #+begin_src emacs-lisp
-  (use-package treesit-auto
-    :ensure t
-    :init
-    (setq treesit-auto-install 'prompt)
-    :config
-    (treesit-auto-add-to-auto-mode-alist 'all)
-    (delete 'csharp treesit-auto-langs) ;; everything but c# which is bugged
-    (global-treesit-auto-mode))
+(setq major-mode-remap-alist
+      '((python-mode . python-ts-mode)
+        (rust-mode . rust-ts-mode)
+        (c-mode . c-ts-mode)
+        (c++-mode . c++-ts-mode)
+        (js-mode . js-ts-mode)))
 #+end_src
 **** ~disproject~: Transient ~project.el~
 Transient interfaces are great! They are amazing to use in ~magit~, this brings them into ~project~ so that I actually remember to use it.
@@ -1505,7 +1491,6 @@ Probably the best debugging option that isn't torturous to use. Only works on a 
     :config
     (setq dape-buffer-window-arrangement 'gud))
 #+end_src
-#+end_src
 **** Language: LaTeX
 LaTeX is very cool and Emacs is really, really good at this mode nowadays. Let's set up a nicer environment first:
 #+begin_src emacs-lisp
@@ -1581,7 +1566,8 @@ Then do very lazy autoformatting with Ruff at save-time.
   (use-package ruff-format
     :ensure t
     :diminish
-    :hook (python-mode . ruff-format-on-save-mode))
+    :hook ((python-mode . ruff-format-on-save-mode)
+  	 (python-ts-mode . ruff-format-on-save-mode)))
 #+end_src
 Also, we need a hook to keep flycheck around just for ruff:
 #+begin_src emacs-lisp
@@ -1604,12 +1590,7 @@ R is always going to be subpar in Emacs, but we can make it at least mildly less
     (require 'ess-r-mode))
 #+end_src
 **** Language: C#/.NET
-This is for the language:
-#+begin_src emacs-lisp
-  (use-package csharp-mode
-    :ensure t)
-#+end_src
-And this is for project files:
+This is for project files. The language is natively a part of Emacs since version 29.0
 #+begin_src emacs-lisp
   (use-package csproj-mode
     :ensure t)
@@ -1652,13 +1633,6 @@ The mode doesn't really come with Emacs:
 TODO: Fix this
 #+begin_src emacs-lisp
   (use-package rust-mode
-    :ensure t)
-#+end_src
-**** Language: Clojure
-The mode doesn't really come with Emacs:
-TODO: Fix this
-#+begin_src emacs-lisp
-  (use-package cider
     :ensure t)
 #+end_src
 **** Language: Nix
@@ -1786,11 +1760,7 @@ So we can do this to get the basic modes:
     :init
     (add-hook 'yaml-mode-hook '(lambda () (ansible-mode 1))))
 #+end_src
-But there's a polymode so we can write Jinja2 inside of Ansible:
-#+begin_src emacs-lisp
-  (use-package poly-ansible
-    :ensure t)
-#+end_src
+I used the polymode in the past, but it costs way too much in startup time. Would not recommend.
 **** Mode: Unix Log
 #+begin_src emacs-lisp
   (use-package logview
@@ -1848,11 +1818,6 @@ But there's a polymode so we can write Jinja2 inside of Ansible:
   (use-package tmux-mode
     :ensure t
     :mode "\\.tmux.conf\\'")
-#+end_src
-**** Mode: MediaWiki
-#+begin_src emacs-lisp
-  (use-package mediawiki
-    :ensure t)
 #+end_src
 **** Mode: robots.txt
 #+begin_src emacs-lisp
