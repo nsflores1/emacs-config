@@ -1,45 +1,22 @@
 * Personal Emacs Configuration 🏡
-This repository contains the setup for an Emacs configuration, tailored for my use. It has features well suited for:
-- Rust
-- Python
-- Systems administration
-- General editing
+This repository contains the setup for my Emacs configuration. It's useful for a wide variety of things, but of course you should fork this and edit it for your own purposes.
 
-It works best on macOS and in a graphical frame. For the best experience, use Yamamoto Mitsuharu's Emacs macOS port, or a pureGTK build on Linux. Currently, it only works on Emacs versions newer than 28 (and given the current version is Emacs 30, it's unlikely I'll ever go back and add support for older versions).
+It works best on macOS and in a graphical frame. For the best experience, use [[https://github.com/railwaycat/homebrew-emacsmacport][Yamamoto Mitsuharu's Emacs macOS port]] or [[https://github.com/jimeh/emacs-builds][Emacs Builds for macOS]]. It /might/ work on Linux or WSL, and almost certainly won't work under Windows without substantial changes. 
 
-I created this rather than using an existing configuration because when something breaks, most configurations are so opaque that it's unclear what parts feed into each other. The goal of this configuration is that each part is obvious, separated, and transparent in what it's doing, so that you can figure it out and quickly fix it yourself rather than ~grep~-ping through a thousand different ~.el~ files to find the bug.  
-
-The whole configuration lives in this file, so just scroll down!
+This file is split up by packages, grouped in a way that I think is logical. At run-time, ~early-init.el~ splits this file into many smaller elisp files that are then read by Emacs as one combined ~README.el~. This happens at every startup and is a bit slow, so I recommend only restarting Emacs when absolutely needed, since almost all Emacs operations can be done without needing to restart Emacs, including updating and installing new packages.
 
 ** How to Install 💻
 Firstly, make sure the following programs are installed:
-- ~python3~, MUST be Python 3
-- ~ripgrep~ (optional)
-- ~git~ (used by ~magit~)
-- ~gcc~ and ~cmake~, used for ~vterm~ (optional, just say ~n~ when asked on install)
-- ~fish~, used to make completion files for ~eshell~ (optional)
-- ~aspell~, used for enabling spellcheck in ~jinx~ (optional)
-- Any specific language servers/packages needed by certain modes:
-  - ~node~, to enable language server autoinstall for many languages
-  - Shell: ~checkbashisms~ (optional)
-  - LaTeX: ~texlab~ (or any other language server)
-  - Common Lisp: ~sbcl~ (or any other implementation)
-  - Fortran: ~fortls~
-  - Markdown: ~markdown~
-  - Rust: ~rust-analyzer~
-  - Python: ~black~ and ~pyright~ (all the other ones don't work)
-  - Go: ~gopls~
-  - Java: ~maven~, ~jdtls~, ~openjvm~ (obviously)
-  
+- ~git~ (used by ~elpaca~)
+- ~gcc~ and ~cmake~, used for ~vterm~ (optional, if not just say ~n~ when asked on install and add ~:disable t~ to ~vterm~)
+
 Ideally in a future version of this configuration, it would prompt you to install these, but that's currently not the case. I'll fix that eventually.
 
-~git clone~ this into ~/.emacs.d~, then start Emacs. This will take a little time on initial startup, but after the first boot this process should become substantially faster. It works on *my* machine, but I make no guarantees that this will be the case on yours! 
+~git clone~ this into ~/.emacs.d~, then start Emacs. On the first boot, this is very slow. It gets much better after the first run completes. On my machine, it takes about 6 seconds for Emacs to start. If this is substantially slower on your machine, make sure you're using Emacs 30 or newer, as the GCC JIT was not enabled before then & this config may cause extreme slowdowns in some cases without it.
+
 ** Things To Improve 🤔
-- Update this to use the new features in Emacs 30
 - Make sure that Emacs makes sure you have all the packages you need, and gracefully degrades on failure
-- Add ensures by default rather than typing it manually
 - Add ~puni~ rather than ~paredit~
-- Make Emacs faster since it's kind of extremely slow now, especially at bootup
 - Add ~consult-gh~ support
 ** The Actual Configuration 📖
 *** Package Manager & Key Tools
@@ -78,186 +55,237 @@ Now sync everything, one more time.
 *** Graphics Fixes
 We didn't have the frame loaded and rendered in until this point, so we couldn't fix stuff that was really visually annoying. Now, we can.
 #+begin_src emacs-lisp
+  (menu-bar-mode -1)
   (tool-bar-mode -1)
   (scroll-bar-mode -1)
   (pixel-scroll-mode)
   (pixel-scroll-precision-mode)
+  (global-prettify-symbols-mode 1)
   (setq window-sides-vertical t)
 
   (setq use-file-dialog nil
-  	use-dialog-box nil
-  	inhibit-startup-screen t)
+    	   use-dialog-box nil
+    	   inhibit-startup-screen t)
 
   (setq mac-command-modifier 'meta)
 
   (setq use-package-compute-statistics t)
 
   (setopt line-number-mode t
-  	  column-number-mode t
-  	  x-underline-at-descent-line nil
-  	  switch-to-buffer-obey-display-actions t
-  	  show-trailing-whitespace nil
-  	  indicate-buffer-boundaries 'left)
+    		column-number-mode t
+    		x-underline-at-descent-line nil
+    		switch-to-buffer-obey-display-actions t
+    		show-trailing-whitespace nil
+    		indicate-buffer-boundaries 'left)
 
-  ; horizontal mouse scrolling
+  ;; horizontal mouse scrolling
   (setopt mouse-wheel-tilt-scroll t
-  	  mouse-wheel-flip-direction t)
+    		mouse-wheel-flip-direction t)
 
-  ; line numbers in programming modes
+  ;; line numbers in programming modes
   (add-hook 'prog-mode-hook 'display-line-numbers-mode)
   (setopt display-line-numbers-width 3)
 
-  ; wrap text in visual modes
+  ;; wrap text in visual modes
   (add-hook 'text-mode-hook 'visual-line-mode)
-  ; hack to hide visual line mode
-  ; we don't need to see it. we'll *know*.
+  ;; hack to hide visual line mode
+  ;; we don't need to see it. we'll *know*.
   (use-package emacs
     :diminish visual-line-mode)
 
-  ; modes where hl-line is enabled
+  ;; modes where hl-line is enabled
   (let ((hl-line-hooks '(text-mode-hook prog-mode-hook)))
     (mapc (lambda (hook) (add-hook hook 'hl-line-mode)) hl-line-hooks))
 #+end_src
 *** Behavior Fixes
-These need to go first because if something fails later I need these loaded. Absolutely vital that this works.
+These go first, so that even if loading the rest of this file fails, there's at least some fixes to the parts of Emacs which can largely be considered to be "bad defaults". 
 #+begin_src emacs-lisp
-     ;; genuinely baffling how this isn't the default
-     (global-set-key (kbd "C-x C-b") 'ibuffer)
+  ;; genuinely baffling how this isn't the default
+  (global-set-key (kbd "C-x C-b") 'ibuffer)
 
-     ;; hate to use a package here, but this should always work
-     (use-package ibuffer-vc
-       :ensure t)
+  (require 'ibuffer)
 
-     (require 'ibuffer)
-   ;;  (require 'ibuffer-vc)
+  ;; hate to use a package here, but this should always work
+  (use-package ibuffer-vc
+    :ensure t
+    :config
+    (require 'ibuffer-vc)
+    (add-hook 'ibuffer-hook
+  	    (lambda ()
+  	      (ibuffer-vc-set-filter-groups-by-vc-root)
+  	      (unless (eq ibuffer-sorting-mode 'alphabetic)
+  		(ibuffer-do-sort-by-alphabetic)))))
 
-     ;; fix file sizes
-     (define-ibuffer-column size-h
-       (:name "Size"
-  	      :inline t)
-       (file-size-human-readable (buffer-size)))
+  ;; disable bidirectional text almost always
+  (setq-default bidi-display-reordering 'left-to-right
+                bidi-paragraph-direction 'left-to-right)
+  (setq bidi-inhibit-bpa t)
 
-     (setq ibuffer-formats
-  	   '((mark modified read-only locked " "
-  		   (name 18 18 :left :elide)
-  		   " "
-  		   (size-h 9 -1 :right)
-  		   " "
-  		   (mode 16 16 :left :elide)
-  		   " "
-  		   filename-and-process)))
+  ;; don't fontify until we're done typing for speed
+  (setq redisplay-skip-fontification-on-input t)
 
-  ;; ;; group by version controlled buffers
-  ;; (add-hook 'ibuffer-hook
-  ;; 	    (lambda ()
-  ;; 	      (ibuffer-vc-set-filter-groups-by-vc-root)
-  ;; 	      (unless (eq ibuffer-sorting-mode 'alphabetic)
-  ;; 		(ibuffer-do-sort-by-alphabetic))))
+  ;; make lsp mode faster
+  (setq read-process-output-max (* 16 1024 1024)) ;; 16MB
 
-     ;; need for code snippets
-     (require 'org-tempo)
+  ;; don't render the cursor in non-focused windows
+  (setq-default cursor-in-non-selected-windows nil)
+  (setq highlight-nonselected-windows nil)
 
-     ;; reread files from disk
-     (setopt auto-revert-avoid-polling t)
-     (setopt auto-revert-interval 5)
-     (setopt auto-revert-check-vc-info t)
-     (global-auto-revert-mode)
+  ;; always save our clipboard before adding new items to the kill ring
+  ;; this is so annoying I'm confused it's not default
+  (setq save-interprogram-paste-before-kill t)
 
-     ;; move through windows with Ctrl-<arrow keys>
-     (windmove-default-keybindings 'control)
+  ;; no kill ring dupes
+  (setq kill-do-not-save-duplicates t)
 
-     ;; fix archaic defaults
-     (setopt sentence-end-double-space nil)
+  ;; if we save a file that should be executable, chmod it for us
+  (add-hook 'after-save-hook
+            #'executable-make-buffer-file-executable-if-script-p)
 
-     ;; make right-click do something sensible
-     (when (display-graphic-p)
-       (context-menu-mode))
+  ;; don't check to see if a file is remote on find-file-at-point
+  (setq ffap-machine-p-known 'reject)
 
-     ;; don't litter file system with *~ backup files; put them all inside
-     ;; ~/.emacs.d/backup or wherever
-     (let ((auto-dir (expand-file-name "autosaves/" user-emacs-directory))
-  	   (backup-dir (expand-file-name "backups/" user-emacs-directory)))
-       (dolist (dir (list auto-dir backup-dir))
-  	 (unless (file-exists-p dir) (make-directory dir t)))
-       (setq backup-directory-alist `(("." . ,backup-dir))
-  	     auto-save-file-name-transforms `((".*" ,auto-dir t))
-  	     auto-save-list-file-prefix (concat auto-dir ".saves-")))
+  ;; resize windows proportionally
+  (setq window-combination-resize t)
 
-     ;; highlight urls
-     ;; if we don't set it this way, xwidget breaks
-     (goto-address-prog-mode)
+  ;; the below makes C-x 1 just focus on a single window, and easily restores them
+  (winner-mode +1)
 
-     ;; show the fill column
-     (setq-default display-fill-column-indicator-column 80)
-     (add-hook 'prog-mode-hook #'display-fill-column-indicator-mode)
+  ;; fix file sizes
+  (define-ibuffer-column size-h
+    (:name "Size"
+  	 :inline t)
+    (file-size-human-readable (buffer-size)))
 
-     ;; force compliation to look nicer
-     (add-hook 'complilation-mode-hook 'visual-line-mode)
+  (setq ibuffer-formats
+        '((mark modified read-only locked " "
+  	      (name 18 18 :left :elide)
+  	      " "
+  	      (size-h 9 -1 :right)
+  	      " "
+  	      (mode 16 16 :left :elide)
+  	      " "
+  	      filename-and-process)))
 
-     ;; nicer prompts
-     (fset 'yes-or-no-p 'y-or-n-p)
-     ;; doesn't work in older emacs
-     (when (version< emacs-version "29")
-       (when (boundp 'use-short-answers)
-  	 (setopt use-short-answers t)))
+  ;; need for code snippets
+  (require 'org-tempo)
 
-     ;; remember where we are and what we're doing
-     (save-place-mode 1)
-     (setq history-length 1000
-  	   recentf-max-saved-items 1000)
-     (recentf-mode 1)
-     (savehist-mode 1)
+  ;; reread files from disk
+  (setopt auto-revert-avoid-polling t)
+  (setopt auto-revert-interval 5)
+  (setopt auto-revert-check-vc-info t)
+  (global-auto-revert-mode)
 
-     ;; always use UTF-8
-     (prefer-coding-system 'utf-8)
-     (setq locale-coding-system 'utf-8)
-     (unless *is-a-windows*
-       (set-selection-coding-system 'utf-8))
+  ;; move through windows with Ctrl-<arrow keys>
+  (windmove-default-keybindings 'control)
 
-     ;; when we have two unique buffers, act like it
-     (require 'uniquify)
-     (setq uniquify-separator " • "
-  	   uniquify-after-kill-buffer-p t
-  	   uniquify-ignore-buffers-re "^\\*"
-  	   uniquify-buffer-name-style 'reverse)
+  ;; fix archaic defaults
+  (setopt sentence-end-double-space nil)
 
-     ;; handle long files
-     (when (fboundp 'so-long-enable)
-       (add-hook 'after-init-hook 'so-long-enable))
+  ;; make right-click do something sensible
+  (when (display-graphic-p)
+    (context-menu-mode))
 
-     ;; when we're a mac, use mdfind not find
-     (when *is-a-mac*
-       (setq-default locate-command "mdfind"))
+  ;; don't litter file system with *~ backup files; put them all inside
+  ;; ~/.emacs.d/backup or wherever
+  (let ((auto-dir (expand-file-name "autosaves/" user-emacs-directory))
+        (backup-dir (expand-file-name "backups/" user-emacs-directory)))
+    (dolist (dir (list auto-dir backup-dir))
+      (unless (file-exists-p dir) (make-directory dir t)))
+    (setq backup-directory-alist `(("." . ,backup-dir))
+  	auto-save-file-name-transforms `((".*" ,auto-dir t))
+  	auto-save-list-file-prefix (concat auto-dir ".saves-")))
 
-     ;; make TRAMP faster
-     (use-package tramp
-       :config
-       (connection-local-set-profile-variables
-  	'remote-direct-async-process
-  	'((tramp-direct-async-process . t)))
-       (connection-local-set-profiles
-  	'(:application tramp :protocol "ssh")
-  	'remote-direct-async-process)
-       ;; Tips to speed up connections
-       ;; change tramp-verbose if you're having issues
-       (setq tramp-verbose 3)
-       (setq tramp-chunksize 2000)
-       (setq tramp-ssh-controlmaster-options nil))
+  ;; highlight urls
+  ;; if we don't set it this way, xwidget breaks
+  (goto-address-prog-mode)
 
-     ;; make dired less awful to look at
-     (setq dired-listing-switches "-alh")
+  ;; show the fill column
+  (setq-default display-fill-column-indicator-column 80)
+  (add-hook 'prog-mode-hook #'display-fill-column-indicator-mode)
 
-     ;; fix the ls related issues on macOS & Unix
-     (if (or *is-a-mac* *is-a-haiku* *is-a-unix*)
-  	 (progn
-  	   (setq ls-lisp-use-insert-directory-program nil
-  		 dired-use-ls-dired nil)
-  	   (require 'ls-lisp)))
+  ;; force compliation to look nicer
+  (add-hook 'complilation-mode-hook 'visual-line-mode)
+
+  ;; nicer prompts
+  (fset 'yes-or-no-p 'y-or-n-p)
+  ;; doesn't work in older emacs
+  (when (version< emacs-version "29")
+    (when (boundp 'use-short-answers)
+      (setopt use-short-answers t)))
+
+  ;; remember where we are and what we're doing
+  (save-place-mode 1)
+  (setq history-length 1000
+        recentf-max-saved-items 1000)
+  (recentf-mode 1)
+  (savehist-mode 1)
+
+  ;; recenter the view when we return to a known file
+  (advice-add 'save-place-find-file-hook :after
+              (lambda (&rest _)
+                (when buffer-file-name (ignore-errors (recenter)))))
+
+  ;; save the kill ring to the hist function
+  (setq savehist-additional-variables
+        '(search-ring regexp-search-ring kill-ring))
+
+  ;; but text properties can get large, so strip them
+  ;; thanks, Doom Emacs!
+  (add-hook 'savehist-save-hook
+            (lambda ()
+              (setq kill-ring
+                    (mapcar #'substring-no-properties
+                            (cl-remove-if-not #'stringp kill-ring)))))
+
+  ;; always use UTF-8
+  (prefer-coding-system 'utf-8)
+  (setq locale-coding-system 'utf-8)
+  (unless *is-a-windows*
+    (set-selection-coding-system 'utf-8))
+
+  ;; when we have two unique buffers, act like it
+  (require 'uniquify)
+  (setq uniquify-separator " • "
+        uniquify-after-kill-buffer-p t
+        uniquify-ignore-buffers-re "^\\*"
+        uniquify-buffer-name-style 'reverse)
+
+  ;; handle long files
+  (when (fboundp 'so-long-enable)
+    (add-hook 'after-init-hook 'so-long-enable))
+
+  ;; when we're a mac, use mdfind not find
+  (when *is-a-mac*
+    (setq-default locate-command "mdfind"))
+
+  ;; make TRAMP faster
+  (use-package tramp
+    :config
+    (connection-local-set-profile-variables
+     'remote-direct-async-process
+     '((tramp-direct-async-process . t)))
+    (connection-local-set-profiles
+     '(:application tramp :protocol "ssh")
+     'remote-direct-async-process)
+    ;; Tips to speed up connections
+    ;; change tramp-verbose if you're having issues
+    (setq tramp-verbose 3)
+    (setq tramp-chunksize 2000)
+    (setq tramp-ssh-controlmaster-options nil))
+
+  ;; make dired less awful to look at
+  (setq dired-listing-switches "-alh")
+
+  ;; fix the ls related issues on macOS & Unix
+  (if (or *is-a-mac* *is-a-haiku* *is-a-unix*)
+      (progn
+        (setq ls-lisp-use-insert-directory-program nil
+  	    dired-use-ls-dired nil)
+        (require 'ls-lisp)))
 #+end_src
 *** Utility Functions
 These are things that I use that are nice to have but aren't part of GNU Emacs. Although many of them are basically replaced by ~crux~ at this point, it's nice to keep around a vanilla implementation in case packages can't be installed.
-
-TODO: maybe follow the best advice and prefix it like this: https://rhodesmill.org/brandon/2009/commands-with-comma/
 #+begin_src emacs-lisp
   ;; redefine the annoying GNU advertisement
   (defun display-startup-echo-area-message ()
@@ -271,7 +299,7 @@ TODO: maybe follow the best advice and prefix it like this: https://rhodesmill.o
     (unless (buffer-file-name)
       (error "Nothing is being edited right now!"))
     (when (y-or-n-p (format "Really delete '%s'? "
-			    (file-name-nondirectory buffer-file-name)))
+  			  (file-name-nondirectory buffer-file-name)))
       (delete-file (buffer-file-name))
       (kill-this-buffer)
       (message "Buffer killed.")))
@@ -281,15 +309,26 @@ TODO: maybe follow the best advice and prefix it like this: https://rhodesmill.o
     "Renames both current buffer and file it's visiting to NEW-NAME."
     (interactive "sNew name: ")
     (let ((name (buffer-name))
-	  (filename (buffer-file-name)))
+  	(filename (buffer-file-name)))
       (unless filename
-	(error "Buffer '%s' is not visiting a file!" name))
+        (error "Buffer '%s' is not visiting a file!" name))
       (progn
-	(when (file-exists-p filename)
-	  (rename-file filename new-name 1))
-	(set-visited-file-name new-name)
-	(rename-buffer new-name)
-	(message "Buffer renamed."))))
+        (when (file-exists-p filename)
+  	(rename-file filename new-name 1))
+        (set-visited-file-name new-name)
+        (rename-buffer new-name)
+        (message "Buffer renamed."))))
+
+  (defun personal/toggle-delete-other-windows ()
+    "Delete other windows in frame if any, or restore previous window config."
+    (interactive)
+    (if (and winner-mode
+             (equal (selected-window) (next-window)))
+        (winner-undo)
+      (delete-other-windows)))
+
+  (global-set-key (kbd "C-x 1")
+                  #'personal/toggle-delete-other-windows)
 
   ;; Simpify our life.
   (defun personal/revert-to-two-windows ()
@@ -309,15 +348,15 @@ TODO: maybe follow the best advice and prefix it like this: https://rhodesmill.o
     "Add minimal header and footer to an elisp buffer in order to placate flycheck."
     (interactive)
     (let ((fname (if (buffer-file-name)
-		     (file-name-nondirectory (buffer-file-name))
-		   (error "This buffer is not visiting a file"))))
+  		   (file-name-nondirectory (buffer-file-name))
+  		 (error "This buffer is not visiting a file"))))
       (save-excursion
-	(goto-char (point-min))
-	(insert ";;; " fname " --- Insert description here -*- lexical-binding: t -*-\n"
-		";;; Commentary:\n"
-		";;; Code:\n\n")
-	(goto-char (point-max))
-	(insert ";;; " fname " ends here\n"))))
+        (goto-char (point-min))
+        (insert ";;; " fname " --- Insert description here -*- lexical-binding: t -*-\n"
+  	      ";;; Commentary:\n"
+  	      ";;; Code:\n\n")
+        (goto-char (point-max))
+        (insert ";;; " fname " ends here\n"))))
 
   ;; kill all buffers instantly
   ;; genuinely WHY is this not already built-in
@@ -352,7 +391,7 @@ Really nice fix for the fact that stock Emacs can't do this.
   (setopt delete-by-moving-to-trash t)
 #+end_src
 **** ~which-key~
-TODO: this is in stock now, might want to remove
+This is in stock as of Emacs 30, so this just enables it with diminish, and doesn't download anything.
 #+begin_src emacs-lisp
   (use-package which-key
     :ensure t
@@ -520,12 +559,6 @@ Shows the replacements that we're going to do. It shows what the buffer will loo
     :init
     (visual-replace-global-mode 1))
 #+end_src
-**** ~decide~
-TODO: this package is terrible. Write your own...?
-#+begin_src emacs-lisp
-  (use-package decide
-    :ensure t)
-#+end_src
 **** ~vlf~
 Sometimes, files are so big that Emacs simply cannot handle them. This solves that problem by making the performance better. I recommend using this on text files over 100MB, rather than ~so-long-mode~ which only really works well on smaller buffers.
 #+begin_src emacs-lisp
@@ -558,7 +591,7 @@ And then, of course, ~auto-dark-mode~:
   (use-package auto-dark
     :ensure t
     :custom
-    (auto-dark-themes '((solarized-selenized-black) (solarized-selenized-light)))
+    (auto-dark-themes '((solarized-selenized-black) (solarized-selenized-white)))
     (auto-dark-polling-interval-seconds 5)
     (auto-dark-allow-osascript t)
     :hook
@@ -607,8 +640,20 @@ Makes the buffers that aren't part of real files a different color than those th
 #+begin_src emacs-lisp
   (use-package solaire-mode
     :ensure t
+    :diminish
     :config
     (solaire-global-mode +1))
+#+end_src
+**** ~persist-text-scale~
+Persist the scale of the text between reloads!
+#+begin_src emacs-lisp
+  (use-package persist-text-scale
+    :ensure t
+    :custom
+    ;; once every seven minutes
+    (persist-text-scale-autosave-interval (* 7 60))
+    :init
+    (persist-text-scale-mode 1))
 #+end_src
 **** ~modern-fringes~
 This replaces the default bitmaps with some more readable ones.
@@ -650,15 +695,15 @@ And now for the ligatures:
 				"<:<" ";;;"))
     (global-ligature-mode t))
 #+end_src
-**** ~smooth-scrolling~
+**** ~ultra-scroll~
 This is the best package at least on macOS, and probably the best on Linux too.
 #+begin_src emacs-lisp
-  (use-package smooth-scrolling
+  (use-package ultra-scroll
     :ensure t
     :if window-system
     :diminish
-    :hook (after-init . (lambda ()
-			  (smooth-scrolling-mode 1))))
+    :config
+    (ultra-scroll-mode 1))
 #+end_src
 **** ~dimmer~
 This package is finally fixed! Nice, smooth dimming of inactive buffers, that now works relatively well regardless of themes. Nice!
@@ -878,6 +923,16 @@ Tidy up GUIX/Nix directories when you see them in Emacs.
     :init
     (global-pretty-sha-path-mode))
 #+end_src
+**** ~ns-auto-titlebar~
+Set a transparent titlebar on Emacs macOS builds.
+#+begin_src emacs-lisp
+  (use-package ns-auto-titlebar
+    :ensure t
+    :diminish
+    :if *is-a-mac*
+    :config
+    (ns-auto-titlebar-mode))
+#+end_src
 *** Packages: Overhauls
 Some parts of Emacs are fundamentally broken. These packages replace those features outright with new things. I note what's being replaced.
 **** ~eat~: Replacement of ~ansi-term~
@@ -909,6 +964,19 @@ Faster but requires the compiled module so this can fail quite dramatically. It 
   	vterm-color-magenta "#ff6ac1"
   	vterm-color-cyan    "#9aedfe"))
 #+end_src
+**** ~detached~: Async Command Spawner
+TODO: seems useful, but need to read up more on it.
+#+begin_src emacs-lisp
+  (use-package detached
+    :ensure t
+    :config
+    (detached-init)
+    :bind (([remap async-shell-command] . detached-shell-command)
+           ([remap compile] . detached-compile)
+           ([remap recompile] . detached-compile-recompile))
+    :custom ((detached-terminal-data-command system-type)
+             (detached-terminal-data-command system-type)))
+#+end_src
 **** ~multi-term~ & ~multi-vterm~: Summon Many Terminals
 We often need more than one terminal when we're doing things. Let's add that:
 #+begin_src emacs-lisp
@@ -917,8 +985,9 @@ We often need more than one terminal when we're doing things. Let's add that:
 #+end_src
 Oh, and add that for ~vterm~, too:
 #+begin_src emacs-lisp
-  (use-package multi-vterm
-    :ensure t)
+  ;; (use-package multi-vterm
+  ;;   :after vterm
+  ;;   :ensure t)
 #+end_src
 This is such a good feature that stock ~vterm~ should never be used, only ~multi-vterm~.
 **** ~jinx~: Replacement of ~flyspell~
@@ -972,24 +1041,6 @@ And we probably want some better suggestion feedback:
     :after eshell
     :config
     (eshell-did-you-mean-setup))
-#+end_src
-It might also be nice to have a bootup screen like every other shell:
-#+begin_src emacs-lisp
-  ;; TODO: doesn't work well on macOS.
-  ;; you should fork and fix it
-  (use-package eshell-info-banner
-    :ensure t
-    :hook (eshell-banner-load . eshell-info-banner-update-banner))
-#+end_src
-We can also use ~fish~ scripts in ~eshell~, if it's installed:
-#+begin_src emacs-lisp
-  (use-package fish-completion
-    :ensure t
-    :after eshell
-    :diminish global-fish-completion-mode
-    :if (and (executable-find "fish") (or *is-a-linux* *is-a-mac*))
-    :config
-    (global-fish-completion-mode))
 #+end_src
 Lastly, syntax highlighting:
 #+begin_src emacs-lisp
@@ -1240,7 +1291,7 @@ This is technically in Emacs now, but the version it ships with can sometimes be
   (use-package tree-sitter
     :ensure t
     :diminish
-    :init
+    :config
     (global-tree-sitter-mode)
     (add-hook 'tree-sitter-after-on-hook #'tree-sitter-hl-mode))
 
@@ -1339,6 +1390,18 @@ Like ~magit~ but for GitHub. Invaluable.
     :ensure t
     :after magit)
 #+end_src
+**** ~gptel~: LLMs in Emacs
+I don't use this very often, but it solves a very serious problem of Emacs missing some serious features (like proper grammar checking and semantic debugging). This remedies that, but I'm still trying to find a good balance to it.
+#+begin_src emacs-lisp
+  (use-package gptel
+    :ensure t
+    :config
+    (setq gptel-model 'gemma4:e4b-mlx
+  	gptel-backend (gptel-make-ollama "Ollama"
+  	 :host "localhost:11434"
+  	 :stream t
+  	 :models '(gemma4:12b-mlx gemma4:e4b-mlx))))
+#+end_src
 **** ~igist~: GitHub Gist Client
 It's useful for quickly sharing code with someone, and has a nice transient interface. This is probably the best solution for collaborating on a document, which Emacs still can't really do yet.
 #+begin_src emacs-lisp
@@ -1412,7 +1475,9 @@ Does exactly what it says. Has some weird default settings.
 This is nice because it plays well with ~git-timemachine~, so it really does work on any given buffer for Git. 
 #+begin_src emacs-lisp
   (use-package git-link
-    :ensure t)
+    :ensure t
+    :config
+    (global-set-key (kbd "C-c g l") 'git-link))
 #+end_src
 **** ~why-this~: Git Blame Client
 This package adds a few functions which annotate the buffer with Git blames, so you can see exactly who edited what. Useful for figuring out when a change was applied. Disabled by default due to it being annoying in the buffer.
@@ -1472,11 +1537,16 @@ It's pretty good these days, but the choice to make ~company~ mandatory was very
 #+begin_src emacs-lisp
   (use-package lsp-mode
     :ensure t
+    :hook (lsp-completion-mode . (lambda ()
+  				 (setq-local completion-at-point-functions
+  					     (list (cape-capf-super #'lsp-completion-at-point
+  								    #'yasnippet-capf)
+  						   #'cape-file))))
     :bind
     (:map lsp-mode-map
-	  ("C-c d" . lsp-describe-thing-at-point)
-	  ("C-c u" . lsp-ui-imenu)
-	  ("M-i" . lsp-ui-doc-focus-frame)))
+  	  ("C-c d" . lsp-describe-thing-at-point)
+  	  ("C-c u" . lsp-ui-imenu)
+  	  ("M-i" . lsp-ui-doc-focus-frame)))
 #+end_src
 **** ~dape~: Debug Adapter Protocol support
 Probably the best debugging option that isn't torturous to use. Only works on a relatively minimal set of compiled languages at the time of writing.
@@ -1490,6 +1560,31 @@ Probably the best debugging option that isn't torturous to use. Only works on a 
     (dape-breakpoint-global-mode +1)
     :config
     (setq dape-buffer-window-arrangement 'gud))
+#+end_src
+**** ~mindstream~: Summon Scratch
+This quickly creates a content-addressed, day-specific, arbitrary text file that can be used for just about anything. It's quite fantastic, but needs a few changes.
+#+begin_src emacs-lisp
+  (use-package mindstream
+    :ensure t
+    :custom
+    (mindstream-persist t)
+    :config
+    ;; save to $HOME/Documents/Scratch
+    (let ((outpath (expand-file-name "~/Documents/Scratch")))
+      (setq mindstream-path outpath)
+      (setq mindstream-save-session-path outpath))
+    (mindstream-mode))
+#+end_src
+**** ~disaster~: Disassemble C and Fortran
+Very easy in-buffer reference for Fortran and C code. Doesn't work over TRAMP, so it's mostly useful for local-machine debugging only.
+#+begin_src emacs-lisp
+  (use-package disaster
+    :ensure t
+    :config
+    :bind (:map c-mode-map
+  	 ("C-c d" . disaster)
+  	 :map fortran-mode-map
+  	 ("C-c d" . disaster)))
 #+end_src
 **** Language: LaTeX
 LaTeX is very cool and Emacs is really, really good at this mode nowadays. Let's set up a nicer environment first:
@@ -1590,24 +1685,24 @@ R is always going to be subpar in Emacs, but we can make it at least mildly less
     (require 'ess-r-mode))
 #+end_src
 **** Language: C#/.NET
-This is for project files. The language is natively a part of Emacs since version 29.0
+This is for project files. The core language itself is a part of Emacs since version 29.0:
 #+begin_src emacs-lisp
   (use-package csproj-mode
     :ensure t)
 #+end_src
-**** Language: Typescript
-#+begin_src emacs-lisp
-  (use-package typescript-mode
-    :ensure t)
-#+end_src
-**** Language: HTML/CSS/JS
+**** Language: HTML/CSS/JS/TS
 These languages are terrible, fortunately ~skewer-mode~ is great and lets you use all of them in the same buffer all at once, and even summons a web server for you:
 #+begin_src emacs-lisp
   (use-package skewer-mode
     :ensure t)
 #+end_src
+Also, Emacs doesn't ship with native TypeScript support:
+#+begin_src emacs-lisp
+  (use-package typescript-mode
+    :ensure t)
+#+end_src
 **** Language: Go
-The mode doesn't really come with Emacs:
+The mode doesn't come with Emacs:
 #+begin_src emacs-lisp
   (use-package go-mode
     :ensure t
@@ -1629,8 +1724,7 @@ Also, with some cool magic we can use ~eww~ to preview what it'll look like if w
     :ensure t)
 #+end_src
 **** Language: Rust
-The mode doesn't really come with Emacs:
-TODO: Fix this
+The mode doesn't come with Emacs, plus we'd like the newest one always:
 #+begin_src emacs-lisp
   (use-package rust-mode
     :ensure t)
@@ -1831,4 +1925,11 @@ I used the polymode in the past, but it costs way too much in startup time. Woul
   (use-package powershell
     :ensure t
     :mode "\\.ps1\\'")
+#+end_src
+*** End
+This is a good snippet to have right at the end, so that we know exactly how long it took to read the parsed file and execute it into Emacs.
+
+However, it's important to note that this doesn't fully capture the length of init-time, as ~elpaca~ can load lazily.
+#+begin_src emacs-lisp
+(message "[init.el] Startup finished in: %s" (emacs-init-time))
 #+end_src
