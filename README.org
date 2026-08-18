@@ -1565,14 +1565,13 @@ Probably the best debugging option that isn't torturous to use. Only works on a 
 This quickly creates a content-addressed, day-specific, arbitrary text file that can be used for just about anything. It's quite fantastic, but needs a few changes.
 #+begin_src emacs-lisp
   (use-package mindstream
-    :ensure t
-    :custom
-    (mindstream-persist t)
+    ;; TODO: make this not spam directory creation at init time
+    :disabled t
     :config
     ;; save to $HOME/Documents/Scratch
-    (let ((outpath (expand-file-name "~/Documents/Scratch")))
-      (setq mindstream-path outpath)
-      (setq mindstream-save-session-path outpath))
+    (setq mindstream--user-home-directory (expand-file-name "~/Documents/Scratch")) 
+    ;; must be set later, otherwise it creates at the wrong path
+    (setq mindstream-persist t)
     (mindstream-mode))
 #+end_src
 **** ~disaster~: Disassemble C and Fortran
