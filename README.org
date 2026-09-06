@@ -1,7 +1,7 @@
 * Personal Emacs Configuration 🏡
 This repository contains the setup for my Emacs configuration. It's useful for a wide variety of things, but of course you should fork this and edit it for your own purposes.
 
-It works best on macOS and in a graphical frame. For the best experience, use [[https://github.com/railwaycat/homebrew-emacsmacport][Yamamoto Mitsuharu's Emacs macOS port]] or [[https://github.com/jimeh/emacs-builds][Emacs Builds for macOS]]. It /might/ work on Linux or WSL, and almost certainly won't work under Windows without substantial changes. 
+It works best on macOS and in a graphical frame. For the best experience, use [[https://github.com/railwaycat/homebrew-emacsmacport][Yamamoto Mitsuharu's Emacs macOS port]] or [[https://github.com/jimeh/emacs-builds][Emacs Builds for macOS]]. It /might/ work on Linux or WSL, and almost certainly won't work under Windows without substantial changes.
 
 This file is split up by packages, grouped in a way that I think is logical. At run-time, ~early-init.el~ splits this file into many smaller elisp files that are then read by Emacs as one combined ~README.el~. This happens at every startup and is a bit slow, so I recommend only restarting Emacs when absolutely needed, since almost all Emacs operations can be done without needing to restart Emacs, including updating and installing new packages.
 
@@ -19,6 +19,11 @@ Ideally in a future version of this configuration, it would prompt you to instal
 - Add ~puni~ rather than ~paredit~
 - Add ~consult-gh~ support
 ** The Actual Configuration 📖
+*** Lexical Scoping
+Since Emacs 31, dynamic scoping is basically deprecated, so this has to be at the start of any config file.
+#+begin_src emacs-lisp
+  ;; -*- lexical-binding: t; -*-
+#+end_src
 *** Package Manager & Key Tools
 The default ~package.el~ is disabled by ~early-init.el~. Let's use ~Elpaca~ to manage packages, since we defined it in ~init.el~:
 #+begin_src emacs-lisp
@@ -98,10 +103,14 @@ We didn't have the frame loaded and rendered in until this point, so we couldn't
     (mapc (lambda (hook) (add-hook hook 'hl-line-mode)) hl-line-hooks))
 #+end_src
 *** Behavior Fixes
-These go first, so that even if loading the rest of this file fails, there's at least some fixes to the parts of Emacs which can largely be considered to be "bad defaults". 
+These go first, so that even if loading the rest of this file fails, there's at least some fixes to the parts of Emacs which can largely be considered to be "bad defaults".
 #+begin_src emacs-lisp
   ;; genuinely baffling how this isn't the default
   (global-set-key (kbd "C-x C-b") 'ibuffer)
+  (xterm-mouse-mode +1)
+
+  ;; delete trailing whitespace
+  (delete-trailing-whitespace-mode +1)
 
   (require 'ibuffer)
 
@@ -452,7 +461,7 @@ Displays the amount of matches for any given search, which is quite useful.
 #+begin_src emacs-lisp
   (use-package anzu
     :ensure t
-    :diminish 
+    :diminish
     :init
     (global-anzu-mode +1))
 #+end_src
@@ -681,18 +690,18 @@ And now for the ligatures:
     :config
     ;; the JetBrains specific part
     (ligature-set-ligatures 'prog-mode '("--" "---" "==" "===" "!=" "!==" "=!="
-				"=:=" "=/=" "<=" ">=" "&&" "&&&" "&=" "++" "+++" "***" ";;" "!!"
-				"??" "???" "?:" "?." "?=" "<:" ":<" ":>" ">:" "<:<" "<>" "<<<" ">>>"
-				"<<" ">>" "||" "-|" "_|_" "|-" "||-" "|=" "||=" "##" "###" "####"
-				"#{" "#[" "]#" "#(" "#?" "#_" "#_(" "#:" "#!" "#=" "^=" "<$>" "<$"
-				"$>" "<+>" "<+" "+>" "<*>" "<*" "*>" "</" "</>" "/>" "<!--" "<#--"
-				"-->" "->" "->>" "<<-" "<-" "<=<" "=<<" "<<=" "<==" "<=>" "<==>"
-				"==>" "=>" "=>>" ">=>" ">>=" ">>-" ">-" "-<" "-<<" ">->" "<-<" "<-|"
-				"<=|" "|=>" "|->" "<->" "<~~" "<~" "<~>" "~~" "~~>" "~>" "~-" "-~"
-				"~@" "[||]" "|]" "[|" "|}" "{|" "[<" ">]" "|>" "<|" "||>" "<||"
-				"|||>" "<|||" "<|>" "..." ".." ".=" "..<" ".?" "::" ":::" ":=" "::="
-				":?" ":?>" "//" "///" "/*" "*/" "/=" "//=" "/==" "@_" "__" "???"
-				"<:<" ";;;"))
+  				"=:=" "=/=" "<=" ">=" "&&" "&&&" "&=" "++" "+++" "***" ";;" "!!"
+  				"??" "???" "?:" "?." "?=" "<:" ":<" ":>" ">:" "<:<" "<>" "<<<" ">>>"
+  				"<<" ">>" "||" "-|" "_|_" "|-" "||-" "|=" "||=" "##" "###" "####"
+  				"#{" "#[" "]#" "#(" "#?" "#_" "#_(" "#:" "#!" "#=" "^=" "<$>" "<$"
+  				"$>" "<+>" "<+" "+>" "<*>" "<*" "*>" "</" "</>" "/>" "<!--" "<#--"
+  				"-->" "->" "->>" "<<-" "<-" "<=<" "=<<" "<<=" "<==" "<=>" "<==>"
+  				"==>" "=>" "=>>" ">=>" ">>=" ">>-" ">-" "-<" "-<<" ">->" "<-<" "<-|"
+  				"<=|" "|=>" "|->" "<->" "<~~" "<~" "<~>" "~~" "~~>" "~>" "~-" "-~"
+  				"~@" "[||]" "|]" "[|" "|}" "{|" "[<" ">]" "|>" "<|" "||>" "<||"
+  				"|||>" "<|||" "<|>" "..." ".." ".=" "..<" ".?" "::" ":::" ":=" "::="
+  				":?" ":?>" "//" "///" "/*" "*/" "/=" "//=" "/==" "@_" "__" "???"
+  				"<:<" ";;;"))
     (global-ligature-mode t))
 #+end_src
 **** ~ultra-scroll~
@@ -770,10 +779,7 @@ Highlight the code level we're at.
   (use-package indent-bars
     :ensure t
     :diminish
-    :hook (prog-mode . indent-bars-mode)
-    :config
-    ;; come back to this in Emacs 31
-    (setq indent-bars-prefer-character t))
+    :hook (prog-mode . indent-bars-mode))
 #+end_src
 **** ~highlight-escape-sequences~
 #+begin_src emacs-lisp
@@ -820,7 +826,7 @@ Make hex color codes match their values.
 Make the cursor have a nice effect, like ~beacon~ but for within-buffer moves. This thing is so slow because it seemingly recalculates on *every move*...
 #+begin_src emacs-lisp
   (use-package comet-trail
-    :disabled t
+    :ensure t
     :hook ((prog-mode . comet-trail-mode)
 	   (text-mode . comet-trail-mode)
 	   (fundamental-mode . comet-trail-mode))
@@ -933,6 +939,32 @@ Set a transparent titlebar on Emacs macOS builds.
     :config
     (ns-auto-titlebar-mode))
 #+end_src
+**** ~mixed-pitch~
+Makes text modes in Emacs prettier by using a non-monospaced font.
+#+begin_src emacs-lisp
+  (use-package mixed-pitch
+    :ensure t
+    :hook
+    (text-mode . mixed-pitch-mode)
+    :config
+    (setq mixed-pitch-face 'variable-pitch))
+
+  ;; the actual font used
+  (set-face-attribute 'variable-pitch nil :family "IBM Plex Sans" :height 120)
+#+end_src
+We also want to sometimes bump a font size with ~text-scale-increase~, but if we're not smart, the minibuffer will weirdly own this and think it belongs to it. To fix this:
+#+begin_src emacs-lisp
+  (defun personal/prose-scale ()
+    (text-scale-set 1.25)
+    (add-hook 'minibuffer-setup-hook #'personal/reset-minibuffer-scale nil t))
+
+  (defun personal/reset-minibuffer-scale ()
+    (text-scale-set 0))
+
+  (add-hook 'markdown-mode-hook #'personal/prose-scale)
+  (add-hook 'minibuffer-setup-hook
+          (lambda () (text-scale-set 0)))
+#+end_src
 *** Packages: Overhauls
 Some parts of Emacs are fundamentally broken. These packages replace those features outright with new things. I note what's being replaced.
 **** ~eat~: Replacement of ~ansi-term~
@@ -994,7 +1026,7 @@ This is such a good feature that stock ~vterm~ should never be used, only ~multi
 Flyspell is the worst. This is a much better alternative with almost no downsides. We'll also fix our dictionary while we're at it.
 #+begin_src emacs-lisp
   (use-package jinx
-    :ensure t 
+    :ensure t
     :hook (((text-mode prog-mode) . jinx-mode))
     :bind (("C-;" . jinx-correct))
     :custom
@@ -1079,7 +1111,7 @@ These commands completely replace their stock components with upgrades. ~M-y~ to
 #+end_src
 **** ~vertico~: Better Vertical Completion
 Basically exactly what it says. Makes every menu better.
-#+begin_src emacs-lisp  
+#+begin_src emacs-lisp
   (use-package vertico
     :ensure t
     :demand t
@@ -1412,13 +1444,13 @@ It's useful for quickly sharing code with someone, and has a nice transient inte
 So Emacs is great, but its built in web browser (~xwidget-webkit~) is not the best. What's the fix? Simple. Use GhostText and this package to chain the gap, so that we can pop open Emacs on any buffer on the web! It's especially good in cases where you want to use syntax highlighting for something. But it only works on desktop operating systems. For Safari mostly. If you want better for Chrome and Firefox, use ~chrome-emacs~.
 #+begin_src emacs-lisp
   (use-package atomic-chrome
-    :if (and (or *is-a-mac* *is-a-linux*) window-system) 
+    :if (and (or *is-a-mac* *is-a-linux*) window-system)
     :ensure t
     :init
     (atomic-chrome-start-server))
 #+end_src
 **** ~multiple-cursors~: Edit (At Scale)
-This is a crazy package. You can basically select everything you want in one fell swoop, and it makes it extremely easy to do mass editing. Way, way better than the VSCode implementation of this feature (you don't even need to select the same feature, Emacs does it for you). 
+This is a crazy package. You can basically select everything you want in one fell swoop, and it makes it extremely easy to do mass editing. Way, way better than the VSCode implementation of this feature (you don't even need to select the same feature, Emacs does it for you).
 #+begin_src emacs-lisp
   (use-package multiple-cursors
     :ensure t
@@ -1472,7 +1504,7 @@ Does exactly what it says. Has some weird default settings.
     :ensure t)
 #+end_src
 **** ~git-link~: View Online Git
-This is nice because it plays well with ~git-timemachine~, so it really does work on any given buffer for Git. 
+This is nice because it plays well with ~git-timemachine~, so it really does work on any given buffer for Git.
 #+begin_src emacs-lisp
   (use-package git-link
     :ensure t
@@ -1569,7 +1601,7 @@ This quickly creates a content-addressed, day-specific, arbitrary text file that
     :disabled t
     :config
     ;; save to $HOME/Documents/Scratch
-    (setq mindstream--user-home-directory (expand-file-name "~/Documents/Scratch")) 
+    (setq mindstream--user-home-directory (expand-file-name "~/Documents/Scratch"))
     ;; must be set later, otherwise it creates at the wrong path
     (setq mindstream-persist t)
     (mindstream-mode))
@@ -1612,10 +1644,10 @@ LaTeX is very cool and Emacs is really, really good at this mode nowadays. Let's
   (use-package cdlatex
     :ensure t
     :after auctex
-    :diminish 
+    :diminish
     :hook (LaTeX-mode . turn-on-cdlatex))
 #+end_src
-Cool. Now let's set up automatic previews: 
+Cool. Now let's set up automatic previews:
 #+begin_src emacs-lisp
   (defun personal/latex-auto-compile ()
     (when (eq major-mode 'LaTeX-mode)
